@@ -1,33 +1,45 @@
 using UnityEngine;
 
 /// <summary>
-/// 거리별 동적 시야 감지(Zone 3단계), 자세별 가중치, 소음 수신을 담당하는 스마트 감지 모듈
+/// 거리별 동적 시야 감지, 벽 반응형 디버그 시야 메쉬(Procedural Mesh), 게이지 충전 원형 시각화를 담당
 /// </summary>
 public class FieldOfView : MonoBehaviour
 {
-    public enum NoiseType { Caution, Alert } // Caution: 수색(Suspicious), Alert: 즉시 발각(Alerted)
+    public enum NoiseType { Caution, Alert }
 
     [Header("Vision Settings")]
-    [SerializeField] private float viewRadius = 15.0f;       // 최대 시야 거리 (15m)
+    [SerializeField] private float viewRadius = 15.0f;
     [Range(0, 360)]
-    [SerializeField] private float viewAngle = 90.0f;        // 시야 각도 (부채꼴 90도)
-    [SerializeField] private LayerMask targetMask;           // 감지 대상 (Player)
-    [SerializeField] private LayerMask obstacleMask;         // 시야 장애물 (Wall, Default)
-    [SerializeField] private Transform eyeTransform;         // 적의 눈 위치
+    [SerializeField] private float viewAngle = 90.0f;
+    [SerializeField] private LayerMask targetMask;
+    [SerializeField] private LayerMask obstacleMask;
+    [SerializeField] private Transform eyeTransform;
 
     [Header("Detection Multipliers")]
-    [SerializeField] private float baseDetectionSpeed = 1.0f; // 기본 게이지 차오르는 속도
-    [SerializeField] private float crouchMultiplier = 0.4f;   // 앉았을 때 감지 속도 감쇄 (60% 감소)
-    [SerializeField] private float sprintMultiplier = 1.8f;   // 달릴 때 감지 속도 증가 (80% 증가)
+    [SerializeField] private float baseDetectionSpeed = 2.0f;           // 🎯 기본 감지 속도 2배 상향! (기존 1.0f ➔ 2.0f)
+    [SerializeField] private float crouchMultiplier = 0.4f;              // 앉았을 때 (40% 속도)
+    [SerializeField] private float sprintMultiplier = 1.8f;              // 달릴 때 (180% 속도)
+    [SerializeField] private float suspiciousDetectionMultiplier = 1.5f; // 🎯 의심 상태 가속 배율 (2.0f * 1.5f = 3배 속도)
+
+    [Header("Debug FOV Mesh Visualizer")]
+    [SerializeField] private bool showDebugFOV = true;
+    [SerializeField] private int meshResolution = 30;
+    [SerializeField] private float meshHeightOffset = 0.05f;
 
     private Transform visiblePlayer;
     private bool canSeePlayer = false;
-    private float currentNormalizedDistance = 1.0f; // 0.0(초근접) ~ 1.0(최대 거리)
+    private float currentNormalizedDistance = 1.0f;
 
-    // 소음 수신 변수
     private bool hasHeardNoise = false;
     private Vector3 lastHeardNoisePosition;
     private NoiseType lastHeardNoiseType = NoiseType.Caution;
+
+    private MeshFilter outerMeshFilter;
+    private MeshFilter innerMeshFilter;
+    private MeshRenderer outerMeshRenderer;
+    private MeshRenderer innerMeshRenderer;
+    private Mesh outerMesh;
+    private Mesh innerMesh;
 
     public bool CanSeePlayer => canSeePlayer;
     public Transform VisiblePlayer => visiblePlayer;
@@ -41,13 +53,25 @@ public class FieldOfView : MonoBehaviour
 
     private void Start()
     {
-        if (eyeTransform == null)
-            eyeTransform = transform;
+        if (eyeTransform == null) eyeTransform = transform;
+
+        if (showDebugFOV)
+        {
+            SetupFOVMeshObjects();
+        }
     }
 
     private void Update()
     {
         FindVisiblePlayer();
+    }
+
+    private void LateUpdate()
+    {
+        if (showDebugFOV && outerMeshFilter != null)
+        {
+            DrawFOVMesh();
+        }
     }
 
     private void FindVisiblePlayer()
@@ -67,13 +91,10 @@ public class FieldOfView : MonoBehaviour
             {
                 float distToTarget = Vector3.Distance(eyeTransform.position, target.position);
 
-                // 시야 장애물 체크 (Line of Sight)
                 if (!Physics.Raycast(eyeTransform.position, dirToTarget, distToTarget, obstacleMask))
                 {
                     canSeePlayer = true;
                     visiblePlayer = target;
-
-                    // 0.0(눈앞) ~ 1.0(최대 시야 끝) 정규화 거리 계산
                     currentNormalizedDistance = Mathf.Clamp01(distToTarget / viewRadius);
                     break;
                 }
@@ -81,17 +102,12 @@ public class FieldOfView : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 플레이어의 거리 및 자세(앉기/달리기)를 반영하여 실시간 감지 게이지 증가량을 계산
-    /// </summary>
-    public float CalculateDetectionDelta(PlayerController player)
+    public float CalculateDetectionDelta(PlayerController player, EnemyAI.State currentState)
     {
-        if (!canSeePlayer) return -1.0f; // 안 보일 때는 감소 신호
+        if (!canSeePlayer) return -1.0f;
 
-        // 거리가 가까울수록 가속도가 제곱으로 치솟음 (거리 가중치)
         float distanceWeight = Mathf.Pow(1.0f - currentNormalizedDistance, 2f) + 0.2f;
 
-        // 플레이어 자세 반영
         float postureWeight = 1.0f;
         if (player != null)
         {
@@ -99,12 +115,11 @@ public class FieldOfView : MonoBehaviour
             else if (player.IsSprinting) postureWeight = sprintMultiplier;
         }
 
-        return baseDetectionSpeed * distanceWeight * postureWeight * Time.deltaTime * 100f;
+        float stateMultiplier = (currentState == EnemyAI.State.Suspicious) ? suspiciousDetectionMultiplier : 1.0f;
+
+        return baseDetectionSpeed * distanceWeight * postureWeight * stateMultiplier * Time.deltaTime * 100f;
     }
 
-    /// <summary>
-    /// 외부 소음 수신 (Caution: 수색, Alert: 즉시 발각)
-    /// </summary>
     public void ListenNoise(Vector3 noisePosition, float noiseRadius, NoiseType noiseType)
     {
         float distance = Vector3.Distance(transform.position, noisePosition);
@@ -113,7 +128,6 @@ public class FieldOfView : MonoBehaviour
             hasHeardNoise = true;
             lastHeardNoisePosition = noisePosition;
             lastHeardNoiseType = noiseType;
-            Debug.Log($"👂 [{gameObject.name}] 소음 수신! 유형: {noiseType}, 위치: {noisePosition}");
         }
     }
 
@@ -122,33 +136,126 @@ public class FieldOfView : MonoBehaviour
         hasHeardNoise = false;
     }
 
-    private void OnDrawGizmosSelected()
+    #region Procedural FOV Mesh Visualizer
+
+    private void SetupFOVMeshObjects()
     {
-        Transform eye = eyeTransform != null ? eyeTransform : transform;
+        GameObject outerObj = new GameObject("FOV_Outer_Mesh");
+        outerObj.transform.SetParent(transform, false);
+        outerMeshFilter = outerObj.AddComponent<MeshFilter>();
+        outerMeshRenderer = outerObj.AddComponent<MeshRenderer>();
+        outerMesh = new Mesh { name = "Outer FOV Mesh" };
+        outerMeshFilter.mesh = outerMesh;
 
-        Gizmos.color = Color.white;
-        Gizmos.DrawWireSphere(eye.position, viewRadius);
+        GameObject innerObj = new GameObject("FOV_Inner_Mesh");
+        innerObj.transform.SetParent(transform, false);
+        innerMeshFilter = innerObj.AddComponent<MeshFilter>();
+        innerMeshRenderer = innerObj.AddComponent<MeshRenderer>();
+        innerMesh = new Mesh { name = "Inner FOV Mesh" };
+        innerMeshFilter.mesh = innerMesh;
 
-        Vector3 viewAngleA = DirFromAngle(-viewAngle / 2, false);
-        Vector3 viewAngleB = DirFromAngle(viewAngle / 2, false);
+        Material transMat = new Material(Shader.Find("Sprites/Default"));
+        outerMeshRenderer.material = transMat;
+        innerMeshRenderer.material = transMat;
+    }
 
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(eye.position, eye.position + viewAngleA * viewRadius);
-        Gizmos.DrawLine(eye.position, eye.position + viewAngleB * viewRadius);
+    private void DrawFOVMesh()
+    {
+        EnemyAI ai = GetComponent<EnemyAI>();
+        EnemyAI.State state = ai != null ? ai.CurrentState : EnemyAI.State.Patrol;
+        float gaugePercent = ai != null ? ai.CurrentDetectionGauge / 100f : 0f;
 
-        if (canSeePlayer && visiblePlayer != null)
+        Color outerColor = GetStateColor(state, isInner: false);
+        Color innerColor = GetStateColor(state, isInner: true);
+
+        outerMeshRenderer.material.color = outerColor;
+        innerMeshRenderer.material.color = innerColor;
+
+        GenerateArcMesh(outerMesh, viewRadius);
+
+        if (gaugePercent > 0f)
         {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(eye.position, visiblePlayer.position);
+            innerMeshRenderer.enabled = true;
+            GenerateArcMesh(innerMesh, viewRadius * gaugePercent);
+        }
+        else
+        {
+            innerMeshRenderer.enabled = false;
         }
     }
 
+    private void GenerateArcMesh(Mesh mesh, float radius)
+    {
+        int stepCount = Mathf.RoundToInt(viewAngle * meshResolution / 90f);
+        float stepAngleSize = viewAngle / stepCount;
+
+        Vector3[] vertices = new Vector3[stepCount + 2];
+        int[] triangles = new int[stepCount * 3];
+
+        vertices[0] = transform.InverseTransformPoint(transform.position + Vector3.up * meshHeightOffset);
+
+        int vertexIndex = 1;
+        int triangleIndex = 0;
+
+        for (int i = 0; i <= stepCount; i++)
+        {
+            float angle = transform.eulerAngles.y - viewAngle / 2f + stepAngleSize * i;
+            Vector3 dir = DirFromAngle(angle, true);
+
+            Vector3 hitPoint;
+            if (Physics.Raycast(eyeTransform.position, dir, out RaycastHit hit, radius, obstacleMask))
+            {
+                hitPoint = hit.point;
+            }
+            else
+            {
+                hitPoint = eyeTransform.position + dir * radius;
+            }
+
+            hitPoint.y = transform.position.y + meshHeightOffset;
+            vertices[vertexIndex] = transform.InverseTransformPoint(hitPoint);
+
+            if (i < stepCount)
+            {
+                triangles[triangleIndex] = 0;
+                triangles[triangleIndex + 1] = vertexIndex;
+                triangles[triangleIndex + 2] = vertexIndex + 1;
+                triangleIndex += 3;
+            }
+
+            vertexIndex++;
+        }
+
+        mesh.Clear();
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+    }
+
+    private Color GetStateColor(EnemyAI.State state, bool isInner)
+    {
+        switch (state)
+        {
+            case EnemyAI.State.Patrol:
+                return isInner
+                    ? new Color(1f, 0.6f, 0f, 0.6f)
+                    : new Color(1f, 0.92f, 0.015f, 0.25f);
+            case EnemyAI.State.Suspicious:
+                return isInner
+                    ? new Color(1f, 0.35f, 0f, 0.8f)
+                    : new Color(1f, 0.5f, 0f, 0.4f);
+            case EnemyAI.State.Alerted:
+                return new Color(1f, 0f, 0f, 0.5f);
+            default:
+                return new Color(1f, 1f, 1f, 0.2f);
+        }
+    }
+
+    #endregion
+
     public Vector3 DirFromAngle(float angleInDegrees, bool angleIsGlobal)
     {
-        if (!angleIsGlobal)
-        {
-            angleInDegrees += transform.eulerAngles.y;
-        }
+        if (!angleIsGlobal) angleInDegrees += transform.eulerAngles.y;
         return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
     }
 }

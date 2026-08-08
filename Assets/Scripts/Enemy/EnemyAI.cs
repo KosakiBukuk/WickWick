@@ -1,34 +1,43 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// 적 AI의 4단계 FSM(Patrol, Suspicious, Detecting, Alerted), LKP 추적, 동료 경보를 제어하는 핵심 두뇌
+/// 감지 게이지 기반 FSM, 2배 가속 감지, 수색 및 순찰 복귀 후 6.5초 게이지 유지(Hold) 시스템
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(FieldOfView))]
 public class EnemyAI : MonoBehaviour
 {
-    public enum State { Patrol, Suspicious, Detecting, Alerted }
+    public enum State { Patrol, Suspicious, Alerted }
 
     [Header("Current FSM State")]
     [SerializeField] private State currentState = State.Patrol;
 
     [Header("Patrol Settings")]
-    [SerializeField] private Transform[] waypoints;          // 순찰 경로 지점들
+    [SerializeField] private Transform[] waypoints;
     [SerializeField] private float patrolSpeed = 2.0f;
-    [SerializeField] private float waypointWaitTime = 2.0f;  // 지점 도착 후 대기 시간
+    [SerializeField] private float waypointWaitTime = 2.0f;
 
-    [Header("Chase & Investigation Settings")]
+    [Header("Investigation (Suspicious) Settings")]
+    [SerializeField] private float suspiciousSpeedMultiplier = 0.6f;
+    [SerializeField] private float maxInvestigateDistance = 4.0f;
+    [SerializeField] private float lookAroundAngle = 45.0f;
+    [SerializeField] private float lookAroundWaitTime = 2.0f;
+
+    [Header("Chase (Alerted) Settings")]
     [SerializeField] private float chaseSpeed = 4.5f;
-    [SerializeField] private float investigateTime = 5.0f;   // LKP/소음 지점 수색 시간 (5초)
-    [SerializeField] private float alertBroadcastRadius = 15.0f; // 주변 동료 경보 반경 (15m)
+    [SerializeField] private float alertBroadcastRadius = 15.0f;
+    [SerializeField] private float alertMemoryTime = 2.5f;
+    [SerializeField] private float proximityAlertRadius = 3.0f;
 
-    [Header("Detection Settings")]
-    [SerializeField] private float currentDetectionGauge = 0f; // 0 ~ 100%
-    [SerializeField] private float gaugeDecaySpeed = 25f;      // 안 보일 때 게이지 감소 속도
+    [Header("Detection Gauge Master Settings")]
+    [SerializeField] private float currentDetectionGauge = 0f;
+    [SerializeField] private float gaugeDecaySpeed = 20f;
+    [SerializeField] private float suspiciousThreshold = 30f;
+    [SerializeField] private float noiseGaugeBoost = 35f;
+    [SerializeField] private float suspiciousHoldTime = 6.5f; // 🎯 수색 종료 후 6.5초간 게이지 유지!
 
     private NavMeshAgent agent;
     private FieldOfView fov;
@@ -36,12 +45,13 @@ public class EnemyAI : MonoBehaviour
 
     private int currentWaypointIndex = 0;
     private bool isWaitingAtWaypoint = false;
-    private float investigateTimer = 0f;
-    private Vector3 lastKnownPosition; // 마지막 목격 지점 (LKP)
+    private bool isInvestigatingRoutineActive = false;
+    private float suspiciousHoldTimer = 0f; // 🎯 6.5초 유지 타이머
+    private float alertMemoryTimer = 0f;
+    private Vector3 lastKnownPosition;
 
-    // UI/사운드 연동용 이벤트
     public event Action<State> OnStateChanged;
-    public event Action<float> OnDetectionGaugeChanged; // (0 ~ 100)
+    public event Action<float> OnDetectionGaugeChanged;
 
     public State CurrentState => currentState;
     public float CurrentDetectionGauge => currentDetectionGauge;
@@ -54,9 +64,7 @@ public class EnemyAI : MonoBehaviour
 
     private void Start()
     {
-        // 씬에서 플레이어 자동 탐색
         targetPlayer = FindObjectOfType<PlayerController>();
-
         agent.speed = patrolSpeed;
 
         if (waypoints != null && waypoints.Length > 0)
@@ -68,70 +76,129 @@ public class EnemyAI : MonoBehaviour
     private void Update()
     {
         HandleNoiseEvents();
-        UpdateFSM();
+        UpdateDetectionGauge();
+        UpdateFSMStateByGauge();
+        UpdateFSMBehavior();
     }
 
-    #region FSM Logic
+    #region Detection & Gauge Master Logic
 
-    private void UpdateFSM()
+    private void UpdateDetectionGauge()
     {
-        switch (currentState)
+        if (fov.CanSeePlayer)
         {
-            case State.Patrol:
-                UpdatePatrolState();
-                break;
-            case State.Suspicious:
-                UpdateSuspiciousState();
-                break;
-            case State.Detecting:
-                UpdateDetectingState();
-                break;
-            case State.Alerted:
-                UpdateAlertedState();
-                break;
+            // 시야에 보일 때: 실시간 게이지 상승
+            float delta = fov.CalculateDetectionDelta(targetPlayer, currentState);
+            currentDetectionGauge = Mathf.Clamp(currentDetectionGauge + delta, 0f, 100f);
+        }
+        else if (currentState == State.Suspicious && isInvestigatingRoutineActive)
+        {
+            // 수색 진행 중: 30% 밑으로 안 내려가게 고정
+            currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), suspiciousThreshold, 100f);
+        }
+        else if (suspiciousHoldTimer > 0f)
+        {
+            // 🎯 [핵심] 순찰로 복귀했더라도 6.5초 동안은 게이지가 깎이지 않고 그대로 유지(Hold)!
+            suspiciousHoldTimer -= Time.deltaTime;
+        }
+        else if (currentState != State.Alerted)
+        {
+            // 6.5초가 지난 후: 게이지 서서히 감쇄
+            currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), 0f, 100f);
+        }
+        else
+        {
+            // Alerted 추격 유예 타이머 종료 후 감쇄
+            alertMemoryTimer -= Time.deltaTime;
+            if (alertMemoryTimer <= 0f)
+            {
+                currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), 0f, 100f);
+            }
+        }
+
+        OnDetectionGaugeChanged?.Invoke(currentDetectionGauge);
+    }
+
+    private void UpdateFSMStateByGauge()
+    {
+        State newState;
+
+        if (currentDetectionGauge >= 100f)
+        {
+            newState = State.Alerted;
+        }
+        else if (currentDetectionGauge >= suspiciousThreshold)
+        {
+            newState = State.Suspicious;
+        }
+        else
+        {
+            newState = State.Patrol;
+        }
+
+        if (currentState != newState)
+        {
+            ChangeState(newState);
         }
     }
 
     private void ChangeState(State newState)
     {
-        if (currentState == newState) return;
-
         currentState = newState;
-        Debug.Log($"🤖 [{gameObject.name}] AI 상태 변경: {newState}");
+        Debug.Log($"🤖 [{gameObject.name}] AI 상태 변경: {newState} (게이지: {currentDetectionGauge:F1}%)");
         OnStateChanged?.Invoke(currentState);
 
-        // 상태 변경에 따른 속도 설정
+        StopAllCoroutines();
+        agent.isStopped = false;
+
         switch (currentState)
         {
             case State.Patrol:
                 agent.speed = patrolSpeed;
+                isInvestigatingRoutineActive = false;
+                if (waypoints != null && waypoints.Length > 0)
+                {
+                    agent.SetDestination(waypoints[currentWaypointIndex].position);
+                }
                 break;
+
             case State.Suspicious:
-                agent.speed = patrolSpeed * 1.2f; // 수색 시 약간 빠르게 걸음
+                agent.speed = patrolSpeed * suspiciousSpeedMultiplier;
+                StartCoroutine(InvestigateAndLookAroundRoutine());
                 break;
-            case State.Detecting:
-                agent.speed = patrolSpeed * 0.8f; // 주춤하며 경계
-                break;
+
             case State.Alerted:
-                agent.speed = chaseSpeed; // 전속력 추격!
+                agent.speed = chaseSpeed;
+                alertMemoryTimer = alertMemoryTime;
+                currentDetectionGauge = 100f;
+                isInvestigatingRoutineActive = false;
+                suspiciousHoldTimer = 0f;
+                BroadcastAlertToNearbyEnemies(lastKnownPosition);
                 break;
         }
     }
 
     #endregion
 
-    #region 1. Patrol State
+    #region FSM Behavior Updates
 
-    private void UpdatePatrolState()
+    private void UpdateFSMBehavior()
     {
-        // 1. 시야 감지 검사 ➔ Detecting 상태 전환
-        if (fov.CanSeePlayer)
+        switch (currentState)
         {
-            ChangeState(State.Detecting);
-            return;
+            case State.Patrol:
+                UpdatePatrolBehavior();
+                break;
+            case State.Suspicious:
+                break;
+            case State.Alerted:
+                UpdateAlertedBehavior();
+                break;
         }
+    }
 
-        // 2. 순찰 경로 이동
+    private void UpdatePatrolBehavior()
+    {
         if (waypoints == null || waypoints.Length == 0) return;
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
@@ -155,111 +222,90 @@ public class EnemyAI : MonoBehaviour
 
     #endregion
 
-    #region 2. Suspicious State (수색 및 LKP 추적)
+    #region Suspicious Routine
 
-    private void UpdateSuspiciousState()
+    private IEnumerator InvestigateAndLookAroundRoutine()
     {
-        // 시야에 플레이어가 다시 보이면 즉시 Detecting으로 전환!
-        if (fov.CanSeePlayer)
+        isInvestigatingRoutineActive = true;
+
+        Vector3 startPos = transform.position;
+        Vector3 targetDir = (lastKnownPosition - startPos).normalized;
+        float distToLKP = Vector3.Distance(startPos, lastKnownPosition);
+        float moveDist = Mathf.Min(distToLKP, maxInvestigateDistance);
+
+        Vector3 investTargetPos = startPos + targetDir * moveDist;
+        agent.SetDestination(investTargetPos);
+
+        while (!agent.pathPending && agent.remainingDistance > agent.stoppingDistance)
         {
-            ChangeState(State.Detecting);
-            return;
+            if (currentState == State.Alerted) yield break;
+            yield return null;
         }
 
-        // 의심 지점(LKP 또는 소음 위치)으로 이동
-        agent.SetDestination(lastKnownPosition);
+        agent.isStopped = true;
+        Quaternion baseRotation = transform.rotation;
 
-        // 도착 후 5초간 수색(두리번거림)
-        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        // 좌측 2초 대기
+        Quaternion leftRot = baseRotation * Quaternion.Euler(0, -lookAroundAngle, 0);
+        yield return SmoothRotateRoutine(leftRot, 0.5f);
+        yield return new WaitForSeconds(lookAroundWaitTime);
+
+        // 우측 2초 대기
+        Quaternion rightRot = baseRotation * Quaternion.Euler(0, lookAroundAngle, 0);
+        yield return SmoothRotateRoutine(rightRot, 0.5f);
+        yield return new WaitForSeconds(lookAroundWaitTime);
+
+        // 정면 원위치 복귀
+        yield return SmoothRotateRoutine(baseRotation, 0.5f);
+
+        agent.isStopped = false;
+        isInvestigatingRoutineActive = false;
+
+        // 🎯 [핵심] 수색이 끝나고 순찰로 복귀하는 순간부터 6.5초 타이머 시작!
+        suspiciousHoldTimer = suspiciousHoldTime;
+    }
+
+    private IEnumerator SmoothRotateRoutine(Quaternion targetRot, float duration)
+    {
+        Quaternion startRot = transform.rotation;
+        float time = 0f;
+        while (time < duration)
         {
-            investigateTimer += Time.deltaTime;
-
-            if (investigateTimer >= investigateTime)
-            {
-                investigateTimer = 0f;
-                Debug.Log($"🤖 [{gameObject.name}] 수색 종료! 원래 순찰 노선으로 복귀합니다.");
-
-                // 원래 순찰 지점으로 복귀
-                if (waypoints != null && waypoints.Length > 0)
-                {
-                    agent.SetDestination(waypoints[currentWaypointIndex].position);
-                }
-                ChangeState(State.Patrol);
-            }
+            transform.rotation = Quaternion.Slerp(startRot, targetRot, time / duration);
+            time += Time.deltaTime;
+            yield return null;
         }
+        transform.rotation = targetRot;
     }
 
     #endregion
 
-    #region 3. Detecting State (감지 게이지 누적)
+    #region Alerted Behavior & Broadcast
 
-    private void UpdateDetectingState()
+    private void UpdateAlertedBehavior()
     {
-        if (fov.CanSeePlayer)
-        {
-            // 거리 및 플레이어 자세(앉기/달리기) 반영 게이지 증가
-            float delta = fov.CalculateDetectionDelta(targetPlayer);
-            currentDetectionGauge = Mathf.Clamp(currentDetectionGauge + delta, 0f, 100f);
-            OnDetectionGaugeChanged?.Invoke(currentDetectionGauge);
+        if (targetPlayer == null) return;
 
-            // 게이지 100% 달성 시 ➔ Alerted(발각) 전환!
-            if (currentDetectionGauge >= 100f)
-            {
-                TriggerAlert(fov.VisiblePlayer.position);
-            }
+        float distToPlayer = Vector3.Distance(transform.position, targetPlayer.transform.position);
+        bool isPlayerInProximity = distToPlayer <= proximityAlertRadius;
+
+        if (fov.CanSeePlayer || isPlayerInProximity)
+        {
+            lastKnownPosition = targetPlayer.transform.position;
+            agent.SetDestination(lastKnownPosition);
+            alertMemoryTimer = alertMemoryTime;
         }
         else
         {
-            // 시야에서 벗어나면 게이지 감소
-            currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), 0f, 100f);
-            OnDetectionGaugeChanged?.Invoke(currentDetectionGauge);
-
-            // 게이지가 0이 되면 LKP 수색(Suspicious)으로 이행
-            if (currentDetectionGauge <= 0f)
-            {
-                ChangeState(State.Suspicious);
-            }
+            agent.SetDestination(lastKnownPosition);
         }
     }
 
-    #endregion
-
-    #region 4. Alerted State (추격 & 동료 경보)
-
-    private void UpdateAlertedState()
-    {
-        if (fov.CanSeePlayer)
-        {
-            // 실시간 플레이어 위치 갱신
-            lastKnownPosition = fov.VisiblePlayer.position;
-            agent.SetDestination(lastKnownPosition);
-        }
-        else
-        {
-            // 시야에서 사라져도 마지막 목격 지점(LKP)까지 전속력 이동!
-            agent.SetDestination(lastKnownPosition);
-
-            // LKP 도착 후 플레이어가 없으면 Suspicious(수색) 모드로 이행
-            if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
-            {
-                Debug.Log($"🤖 [{gameObject.name}] LKP 지점에 도착했지만 플레이어가 없습니다. 수색 모드로 전환합니다.");
-                investigateTimer = 0f;
-                ChangeState(State.Suspicious);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 발각 순간 자신 및 주변 동료 적들에게 즉시 경보 발송!
-    /// </summary>
     public void TriggerAlert(Vector3 targetPos)
     {
         lastKnownPosition = targetPos;
         currentDetectionGauge = 100f;
         ChangeState(State.Alerted);
-
-        // 주변 동료 AI 연쇄 경보 (Broadcast)
-        BroadcastAlertToNearbyEnemies(targetPos);
     }
 
     private void BroadcastAlertToNearbyEnemies(Vector3 alertPosition)
@@ -269,10 +315,8 @@ public class EnemyAI : MonoBehaviour
         foreach (var col in nearbyCols)
         {
             EnemyAI enemy = col.GetComponent<EnemyAI>();
-            // 자기 자신이 아니고, 아직 발각 상태가 아닌 동료 적에게 신호 전달
             if (enemy != null && enemy != this && enemy.CurrentState != State.Alerted)
             {
-                Debug.Log($"📢 [{gameObject.name}] ➔ [{enemy.name}] 동료에게 플레이어 발각 위치 전달!");
                 enemy.TriggerAlert(alertPosition);
             }
         }
@@ -290,17 +334,11 @@ public class EnemyAI : MonoBehaviour
 
             if (fov.LastHeardNoiseType == FieldOfView.NoiseType.Alert)
             {
-                // 총기 사격음 ➔ 즉시 Alerted(발각)
                 TriggerAlert(lastKnownPosition);
             }
             else if (fov.LastHeardNoiseType == FieldOfView.NoiseType.Caution)
             {
-                // 일반 소음 ➔ Suspicious(수색)
-                if (currentState != State.Alerted)
-                {
-                    investigateTimer = 0f;
-                    ChangeState(State.Suspicious);
-                }
+                currentDetectionGauge = Mathf.Clamp(currentDetectionGauge + noiseGaugeBoost, 0f, 100f);
             }
 
             fov.ClearNoiseMemory();
@@ -308,15 +346,4 @@ public class EnemyAI : MonoBehaviour
     }
 
     #endregion
-
-    private void OnDrawGizmosSelected()
-    {
-        // LKP 및 수색 지점 Gizmo 표시
-        if (currentState == State.Suspicious || currentState == State.Alerted)
-        {
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawWireSphere(lastKnownPosition, 0.8f);
-            Gizmos.DrawLine(transform.position, lastKnownPosition);
-        }
-    }
 }

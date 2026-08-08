@@ -114,53 +114,67 @@ public class PlayerController : MonoBehaviour
         {
             if (velocity.y < 0)
             {
-                velocity.y = -2f; // 바닥에 안정적으로 밀착
+                velocity.y = -2f;
             }
 
-            // 점프 (앉아있을 때는 점프 불가)
             if (Input.GetButtonDown("Jump") && !isCrouching)
             {
                 velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             }
         }
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+        // 🎯 [유령 조이스틱 차단] 순수 키보드 전용 입력 감지!
+        float x = 0f;
+        float z = 0f;
+
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) z += 1f;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) z -= 1f;
 
         float currentSpeed = walkSpeed;
         if (isCrouching) currentSpeed = crouchSpeed;
         else if (isSprinting) currentSpeed = runSpeed;
 
-        Vector3 move = transform.right * x + transform.forward * z;
-        controller.Move(move * currentSpeed * Time.deltaTime);
+        // 이동 방향 계산
+        Vector3 moveInput = (transform.right * x + transform.forward * z).normalized;
+        Vector3 horizontalMove = moveInput * currentSpeed;
 
-        // 중력 적용
+        // 중력 계산
         velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+
+        // 수평 이동과 Y축 중력을 결합하여 이동
+        Vector3 finalMove = horizontalMove + velocity;
+        controller.Move(finalMove * Time.deltaTime);
     }
 
     private void HandleCrouchHeight()
     {
-        // 1. CharacterController 높이 및 중심점 부드럽게 전환
         float targetHeight = isCrouching ? crouchingHeight : standingHeight;
-        controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
-        controller.center = new Vector3(0, controller.height / 2f, 0);
 
-        // 2. 카메라 높이 연동
-        if (playerCamera != null)
+        // 🎯 [핵심 수정 2] 목표 높이와 실제 높이에 차이가 있을 때만 Lerp 및 center/mesh 보정 수행!
+        if (Mathf.Abs(controller.height - targetHeight) > 0.001f)
         {
-            float targetCamY = isCrouching ? crouchingCameraY : standingCameraY;
-            Vector3 camPos = playerCamera.localPosition;
-            camPos.y = Mathf.Lerp(camPos.y, targetCamY, Time.deltaTime * crouchTransitionSpeed);
-            playerCamera.localPosition = camPos;
-        }
+            controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
+            controller.center = new Vector3(0, controller.height / 2f, 0);
 
-        // 3. 눈에 보이는 메쉬 위치 보정 (바닥 뚫림 방지)
-        if (visualMesh != null)
-        {
-            Vector3 meshPos = visualMesh.localPosition;
-            meshPos.y = controller.height / 2f;
-            visualMesh.localPosition = meshPos;
+            // 카메라 높이 연동
+            if (playerCamera != null)
+            {
+                float targetCamY = isCrouching ? crouchingCameraY : standingCameraY;
+                Vector3 camPos = playerCamera.localPosition;
+                camPos.y = Mathf.Lerp(camPos.y, targetCamY, Time.deltaTime * crouchTransitionSpeed);
+                playerCamera.localPosition = camPos;
+            }
+
+            // 메쉬 위치 보정
+            if (visualMesh != null)
+            {
+                Vector3 meshPos = visualMesh.localPosition;
+                meshPos.y = controller.height / 2f;
+                visualMesh.localPosition = meshPos;
+            }
         }
     }
+
 }
