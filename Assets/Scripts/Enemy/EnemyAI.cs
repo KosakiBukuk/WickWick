@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// 감지 게이지 기반 FSM, 2배 가속 감지, 수색 및 순찰 복귀 후 6.5초 게이지 유지(Hold) 시스템
+/// 감지 게이지 기반 FSM, LKP 수색, 360도 Alerted 추격 및 LKP 4초 대기/35m 이탈 추격 중단 Trigger 제어
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(FieldOfView))]
@@ -29,7 +29,8 @@ public class EnemyAI : MonoBehaviour
     [Header("Chase (Alerted) Settings")]
     [SerializeField] private float chaseSpeed = 4.5f;
     [SerializeField] private float alertBroadcastRadius = 15.0f;
-    [SerializeField] private float alertMemoryTime = 2.5f;
+    [SerializeField] private float alertMemoryTime = 4.0f;      // 🎯 LKP 도착 후 대기하는 시간 (4초)
+    [SerializeField] private float maxChaseDistance = 35.0f;      // 🎯 최대 추격 허용 거리 (35m)
     [SerializeField] private float proximityAlertRadius = 3.0f;
 
     [Header("Detection Gauge Master Settings")]
@@ -37,7 +38,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float gaugeDecaySpeed = 20f;
     [SerializeField] private float suspiciousThreshold = 30f;
     [SerializeField] private float noiseGaugeBoost = 35f;
-    [SerializeField] private float suspiciousHoldTime = 6.5f; // 🎯 수색 종료 후 6.5초간 게이지 유지!
+    [SerializeField] private float suspiciousHoldTime = 6.5f;
 
     private NavMeshAgent agent;
     private FieldOfView fov;
@@ -46,8 +47,9 @@ public class EnemyAI : MonoBehaviour
     private int currentWaypointIndex = 0;
     private bool isWaitingAtWaypoint = false;
     private bool isInvestigatingRoutineActive = false;
-    private float suspiciousHoldTimer = 0f; // 🎯 6.5초 유지 타이머
+    private float suspiciousHoldTimer = 0f;
     private float alertMemoryTimer = 0f;
+    private float lostSightTimer = 0f; // 시야에서 놓친 시간 측정용
     private Vector3 lastKnownPosition;
 
     public event Action<State> OnStateChanged;
@@ -87,29 +89,25 @@ public class EnemyAI : MonoBehaviour
     {
         if (fov.CanSeePlayer)
         {
-            // 시야에 보일 때: 실시간 게이지 상승
             float delta = fov.CalculateDetectionDelta(targetPlayer, currentState);
             currentDetectionGauge = Mathf.Clamp(currentDetectionGauge + delta, 0f, 100f);
+            lostSightTimer = 0f;
         }
         else if (currentState == State.Suspicious && isInvestigatingRoutineActive)
         {
-            // 수색 진행 중: 30% 밑으로 안 내려가게 고정
             currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), suspiciousThreshold, 100f);
         }
         else if (suspiciousHoldTimer > 0f)
         {
-            // 🎯 [핵심] 순찰로 복귀했더라도 6.5초 동안은 게이지가 깎이지 않고 그대로 유지(Hold)!
             suspiciousHoldTimer -= Time.deltaTime;
         }
         else if (currentState != State.Alerted)
         {
-            // 6.5초가 지난 후: 게이지 서서히 감쇄
             currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), 0f, 100f);
         }
         else
         {
-            // Alerted 추격 유예 타이머 종료 후 감쇄
-            alertMemoryTimer -= Time.deltaTime;
+            // 🎯 Alerted 상태일 때: LKP 도착 후 alertMemoryTimer(4초)가 다 깎여야 게이지 감소 시작!
             if (alertMemoryTimer <= 0f)
             {
                 currentDetectionGauge = Mathf.Clamp(currentDetectionGauge - (gaugeDecaySpeed * Time.deltaTime), 0f, 100f);
@@ -150,6 +148,7 @@ public class EnemyAI : MonoBehaviour
 
         StopAllCoroutines();
         agent.isStopped = false;
+        isWaitingAtWaypoint = false;
 
         switch (currentState)
         {
@@ -173,6 +172,7 @@ public class EnemyAI : MonoBehaviour
                 currentDetectionGauge = 100f;
                 isInvestigatingRoutineActive = false;
                 suspiciousHoldTimer = 0f;
+                lostSightTimer = 0f;
                 BroadcastAlertToNearbyEnemies(lastKnownPosition);
                 break;
         }
@@ -213,10 +213,30 @@ public class EnemyAI : MonoBehaviour
     private IEnumerator WaitAtWaypointRoutine()
     {
         isWaitingAtWaypoint = true;
-        yield return new WaitForSeconds(waypointWaitTime);
 
-        currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
-        agent.SetDestination(waypoints[currentWaypointIndex].position);
+        if (waypoints != null && waypoints.Length > 1)
+        {
+            int nextIndex = (currentWaypointIndex + 1) % waypoints.Length;
+            Vector3 dirToNext = (waypoints[nextIndex].position - transform.position).normalized;
+            dirToNext.y = 0f;
+
+            if (dirToNext != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(dirToNext);
+                yield return SmoothRotateRoutine(targetRot, 0.5f);
+            }
+
+            float remainingWait = Mathf.Max(0f, waypointWaitTime - 0.5f);
+            yield return new WaitForSeconds(remainingWait);
+
+            currentWaypointIndex = nextIndex;
+            agent.SetDestination(waypoints[currentWaypointIndex].position);
+        }
+        else
+        {
+            yield return new WaitForSeconds(waypointWaitTime);
+        }
+
         isWaitingAtWaypoint = false;
     }
 
@@ -245,23 +265,19 @@ public class EnemyAI : MonoBehaviour
         agent.isStopped = true;
         Quaternion baseRotation = transform.rotation;
 
-        // 좌측 2초 대기
         Quaternion leftRot = baseRotation * Quaternion.Euler(0, -lookAroundAngle, 0);
         yield return SmoothRotateRoutine(leftRot, 0.5f);
         yield return new WaitForSeconds(lookAroundWaitTime);
 
-        // 우측 2초 대기
         Quaternion rightRot = baseRotation * Quaternion.Euler(0, lookAroundAngle, 0);
         yield return SmoothRotateRoutine(rightRot, 0.5f);
         yield return new WaitForSeconds(lookAroundWaitTime);
 
-        // 정면 원위치 복귀
         yield return SmoothRotateRoutine(baseRotation, 0.5f);
 
         agent.isStopped = false;
         isInvestigatingRoutineActive = false;
 
-        // 🎯 [핵심] 수색이 끝나고 순찰로 복귀하는 순간부터 6.5초 타이머 시작!
         suspiciousHoldTimer = suspiciousHoldTime;
     }
 
@@ -280,7 +296,7 @@ public class EnemyAI : MonoBehaviour
 
     #endregion
 
-    #region Alerted Behavior & Broadcast
+    #region Alerted Behavior & Pursuit Cancellation Trigger
 
     private void UpdateAlertedBehavior()
     {
@@ -289,15 +305,34 @@ public class EnemyAI : MonoBehaviour
         float distToPlayer = Vector3.Distance(transform.position, targetPlayer.transform.position);
         bool isPlayerInProximity = distToPlayer <= proximityAlertRadius;
 
+        // 플레이어를 눈으로 보거나 바짝 붙어있을 때
         if (fov.CanSeePlayer || isPlayerInProximity)
         {
             lastKnownPosition = targetPlayer.transform.position;
             agent.SetDestination(lastKnownPosition);
-            alertMemoryTimer = alertMemoryTime;
+            alertMemoryTimer = alertMemoryTime; // 4초 대기 리셋
+            lostSightTimer = 0f;
         }
         else
         {
+            lostSightTimer += Time.deltaTime;
+
+            // 🎯 [Trigger 1] 플레이어가 35m 이상 멀어지고 3초 이상 안 보이면 추격 즉시 포기!
+            if (distToPlayer >= maxChaseDistance && lostSightTimer >= 3.0f)
+            {
+                Debug.Log($"🏃‍♂️ [{gameObject.name}] 플레이어가 너무 멀어짐({distToPlayer:F1}m). 추격 포기 및 수색 전환!");
+                currentDetectionGauge = suspiciousThreshold + 10f; // 즉시 Suspicious로 강하
+                return;
+            }
+
+            // LKP(마지막 위치)로 전속력 이동
             agent.SetDestination(lastKnownPosition);
+
+            // 🎯 [Trigger 2] LKP 지점에 도착했을 때 4초간 수색 대기 후 게이지 감소 시작
+            if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+            {
+                alertMemoryTimer -= Time.deltaTime;
+            }
         }
     }
 

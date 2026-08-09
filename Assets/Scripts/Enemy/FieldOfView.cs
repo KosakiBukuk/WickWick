@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 거리별 동적 시야 감지, 벽 반응형 디버그 시야 메쉬(Procedural Mesh), 게이지 충전 원형 시각화를 담당
+/// 거리별 동적 시야 감지, Alerted 상태 시 360도 전방위 확장, 벽 반응형 디버그 메쉬를 담당
 /// </summary>
 public class FieldOfView : MonoBehaviour
 {
@@ -16,13 +16,13 @@ public class FieldOfView : MonoBehaviour
     [SerializeField] private Transform eyeTransform;
 
     [Header("Detection Multipliers")]
-    [SerializeField] private float baseDetectionSpeed = 2.0f;           // 🎯 기본 감지 속도 2배 상향! (기존 1.0f ➔ 2.0f)
-    [SerializeField] private float crouchMultiplier = 0.4f;              // 앉았을 때 (40% 속도)
-    [SerializeField] private float sprintMultiplier = 1.8f;              // 달릴 때 (180% 속도)
-    [SerializeField] private float suspiciousDetectionMultiplier = 1.5f; // 🎯 의심 상태 가속 배율 (2.0f * 1.5f = 3배 속도)
+    [SerializeField] private float baseDetectionSpeed = 2.0f;
+    [SerializeField] private float crouchMultiplier = 0.4f;
+    [SerializeField] private float sprintMultiplier = 1.8f;
+    [SerializeField] private float suspiciousDetectionMultiplier = 1.5f;
 
-    [Header("Debug FOV Mesh Visualizer")]
-    [SerializeField] private bool showDebugFOV = true;
+    [Header("Debug FOV Mesh Visualizer (Dev Only)")]
+    [SerializeField] private bool showDebugFOV = true; // 🎯 나중에 머리위 UI 만들면 이거 끄면 됨!
     [SerializeField] private int meshResolution = 30;
     [SerializeField] private float meshHeightOffset = 0.05f;
 
@@ -41,10 +41,25 @@ public class FieldOfView : MonoBehaviour
     private Mesh outerMesh;
     private Mesh innerMesh;
 
+    /// <summary>
+    /// 🎯 [핵심] Alerted(추격) 상태일 때는 시야각을 360도로 자동 확장!
+    /// </summary>
+    public float EffectiveViewAngle
+    {
+        get
+        {
+            EnemyAI ai = GetComponent<EnemyAI>();
+            if (ai != null && ai.CurrentState == EnemyAI.State.Alerted)
+            {
+                return 360.0f; // Alerted 상태 시 전방위 360도
+            }
+            return viewAngle;  // 평소엔 기본 90도
+        }
+    }
+
     public bool CanSeePlayer => canSeePlayer;
     public Transform VisiblePlayer => visiblePlayer;
     public float ViewRadius => viewRadius;
-    public float ViewAngle => viewAngle;
     public float CurrentNormalizedDistance => currentNormalizedDistance;
 
     public bool HasHeardNoise => hasHeardNoise;
@@ -82,12 +97,15 @@ public class FieldOfView : MonoBehaviour
 
         Collider[] targetsInViewRadius = Physics.OverlapSphere(eyeTransform.position, viewRadius, targetMask);
 
+        float currentAngle = EffectiveViewAngle; // 동적 시야각 적용
+
         for (int i = 0; i < targetsInViewRadius.Length; i++)
         {
             Transform target = targetsInViewRadius[i].transform;
             Vector3 dirToTarget = (target.position - eyeTransform.position).normalized;
 
-            if (Vector3.Angle(eyeTransform.forward, dirToTarget) < viewAngle / 2f)
+            // 360도일 때는 무조건 Angle 판정 통과!
+            if (Vector3.Angle(eyeTransform.forward, dirToTarget) < currentAngle / 2f)
             {
                 float distToTarget = Vector3.Distance(eyeTransform.position, target.position);
 
@@ -171,12 +189,13 @@ public class FieldOfView : MonoBehaviour
         outerMeshRenderer.material.color = outerColor;
         innerMeshRenderer.material.color = innerColor;
 
-        GenerateArcMesh(outerMesh, viewRadius);
+        // 동적 시야각(EffectiveViewAngle)을 전달하여 메쉬 생성!
+        GenerateArcMesh(outerMesh, viewRadius, EffectiveViewAngle);
 
-        if (gaugePercent > 0f)
+        if (gaugePercent > 0f && state != EnemyAI.State.Alerted)
         {
             innerMeshRenderer.enabled = true;
-            GenerateArcMesh(innerMesh, viewRadius * gaugePercent);
+            GenerateArcMesh(innerMesh, viewRadius * gaugePercent, EffectiveViewAngle);
         }
         else
         {
@@ -184,10 +203,10 @@ public class FieldOfView : MonoBehaviour
         }
     }
 
-    private void GenerateArcMesh(Mesh mesh, float radius)
+    private void GenerateArcMesh(Mesh mesh, float radius, float angleDegree)
     {
-        int stepCount = Mathf.RoundToInt(viewAngle * meshResolution / 90f);
-        float stepAngleSize = viewAngle / stepCount;
+        int stepCount = Mathf.RoundToInt(angleDegree * meshResolution / 90f);
+        float stepAngleSize = angleDegree / stepCount;
 
         Vector3[] vertices = new Vector3[stepCount + 2];
         int[] triangles = new int[stepCount * 3];
@@ -199,7 +218,7 @@ public class FieldOfView : MonoBehaviour
 
         for (int i = 0; i <= stepCount; i++)
         {
-            float angle = transform.eulerAngles.y - viewAngle / 2f + stepAngleSize * i;
+            float angle = transform.eulerAngles.y - angleDegree / 2f + stepAngleSize * i;
             Vector3 dir = DirFromAngle(angle, true);
 
             Vector3 hitPoint;
@@ -245,7 +264,7 @@ public class FieldOfView : MonoBehaviour
                     ? new Color(1f, 0.35f, 0f, 0.8f)
                     : new Color(1f, 0.5f, 0f, 0.4f);
             case EnemyAI.State.Alerted:
-                return new Color(1f, 0f, 0f, 0.5f);
+                return new Color(1f, 0f, 0f, 0.45f); // 강렬한 빨간색 (360도 전방위)
             default:
                 return new Color(1f, 1f, 1f, 0.2f);
         }
