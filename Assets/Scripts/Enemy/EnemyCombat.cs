@@ -3,290 +3,94 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// 적 체력, 거리별 공격(단검/권총), 조준 선모션 정지, 사격 오차(Accuracy Spread), 사망 및 탄약 드랍 제어
+/// [4단계] 2m 이내 접근 시 단검 베기 공격(선모션 0.25s + 후딜 0.35s) 및 데미지 전달 전담
 /// </summary>
+[RequireComponent(typeof(EnemyHealth))]
 [RequireComponent(typeof(EnemyAI))]
-[RequireComponent(typeof(FieldOfView))]
 public class EnemyCombat : MonoBehaviour
 {
-    [Header("Health Settings")]
-    [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private float currentHealth = 100f;
-
-    [Header("Attack Range Settings")]
-    [SerializeField] private float meleeAttackRange = 2.0f;    // 2m 이내 단검
-    [SerializeField] private float rangedStartRange = 12.0f;   // 🎯 사격 시작 거리 (12m)
-    [SerializeField] private float rangedKeepRange = 16.0f;    // 🎯 사격 유지/취소 거리 (16m)
-
-    [Header("Melee Attack Settings")]
-    [SerializeField] private float meleeDamage = 25f;
-    [SerializeField] private float meleeCooldown = 1.2f;
-
-    [Header("Ranged Attack Settings")]
-    [SerializeField] private float rangedDamage = 15f;
-    [SerializeField] private float aimDuration = 0.4f;         // 🎯 사격 전 조준 대기 시간 (0.4초)
-    [SerializeField] private float fireRateCooldown = 1.5f;    // 2연사 후 다음 공격까지 쿨타임
-    [SerializeField] private float accuracySpread = 0.08f;     // 🎯 사격 오차 범위 (탄착군 분산)
-    [SerializeField] private Transform gunMuzzle;
-
-    [Header("Item Drop Settings")]
-    [SerializeField] private GameObject ammoItemPrefab;
+    [Header("🗡️ Melee Attack Settings")]
+    [SerializeField] private float meleeAttackRange = 2.0f;    // 공격 사거리 (2m)
+    [SerializeField] private float meleeDamage = 25f;          // 단검 데미지
+    [SerializeField] private float meleeWindUpTime = 0.25f;    // 칼 치켜올리는 선모션 (0.25초)
+    [SerializeField] private float meleeRecoveryTime = 0.35f;  // 자세 복귀 후딜레이 (0.35초)
+    [SerializeField] private float meleeCooldown = 1.0f;       // 공격 재사용 쿨타임
 
     private EnemyAI enemyAI;
-    private FieldOfView fov;
+    private EnemyHealth enemyHealth;
     private NavMeshAgent agent;
-    private PlayerController targetPlayer;
+    private Transform playerTransform;
 
-    private float lastMeleeTime = 0f;
-    private float lastRangedTime = 0f;
-    private bool isDead = false;
-    private bool isAimingOrAttacking = false; // 조준/공격 중 중복 실행 방지
-    private bool hasTriggeredInitialAlertShot = false; // 최초 발각 멈춤 사격 실행 여부
-
-    public bool IsDead => isDead;
-    public float CurrentHealth => currentHealth;
+    private float lastAttackTime = 0f;
+    private bool isAttacking = false;
 
     private void Awake()
     {
         enemyAI = GetComponent<EnemyAI>();
-        fov = GetComponent<FieldOfView>();
+        enemyHealth = GetComponent<EnemyHealth>();
         agent = GetComponent<NavMeshAgent>();
     }
 
     private void Start()
     {
-        currentHealth = maxHealth;
-        targetPlayer = FindObjectOfType<PlayerController>();
-
-        // AI 상태 변경 이벤트 구독 (Alerted에 처음 들어갈 때 멈춤 사격 준비)
-        if (enemyAI != null)
-        {
-            enemyAI.OnStateChanged += HandleStateChanged;
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (enemyAI != null)
-        {
-            enemyAI.OnStateChanged -= HandleStateChanged;
-        }
-    }
-
-    private void HandleStateChanged(EnemyAI.State newState)
-    {
-        if (newState == EnemyAI.State.Alerted)
-        {
-            hasTriggeredInitialAlertShot = false;
-        }
+        GameObject p = GameObject.FindWithTag("Player");
+        if (p != null) playerTransform = p.transform;
     }
 
     private void Update()
     {
-        if (isDead || targetPlayer == null) return;
+        if (enemyHealth.IsDead || playerTransform == null) return;
 
-        if (enemyAI.CurrentState == EnemyAI.State.Alerted)
+        // 🎯 Alerted(추격) 상태이고 공격 중이 아닐 때 2m 접근 판단
+        if (enemyAI.CurrentState == EnemyAI.State.Alerted && !isAttacking)
         {
-            HandleCombatBehavior();
-        }
-    }
+            float distToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
-    private void HandleCombatBehavior()
-    {
-        float distToPlayer = Vector3.Distance(transform.position, targetPlayer.transform.position);
-
-        // 조준 또는 사격 중이 아닐 때 플레이어를 향해 부드럽게 회전
-        if (!isAimingOrAttacking)
-        {
-            Vector3 lookDir = (targetPlayer.transform.position - transform.position).normalized;
-            lookDir.y = 0;
-            if (lookDir != Vector3.zero)
+            if (distToPlayer <= meleeAttackRange && Time.time >= lastAttackTime + meleeCooldown)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 8f);
-            }
-        }
-
-        // 🎯 1. 최초 발각 시 제자리 1초 멈춤 경고 사격!
-        if (!hasTriggeredInitialAlertShot && fov.CanSeePlayer)
-        {
-            StartCoroutine(InitialAlertShotRoutine());
-            return;
-        }
-
-        if (isAimingOrAttacking) return;
-
-        // 🎯 2. 근접 단검 공격 (2m 이내)
-        if (distToPlayer <= meleeAttackRange)
-        {
-            if (Time.time >= lastMeleeTime + meleeCooldown)
-            {
-                StartCoroutine(PerformMeleeAttackRoutine());
-            }
-        }
-        // 🎯 3. 원거리 권총 사격 (12m 이내 진입 시)
-        else if (distToPlayer <= rangedStartRange && fov.CanSeePlayer)
-        {
-            if (Time.time >= lastRangedTime + fireRateCooldown)
-            {
-                StartCoroutine(PerformAimAndRangedBurstRoutine());
+                StartCoroutine(MeleeAttackRoutine());
             }
         }
     }
 
-    #region Attack Routines
-
-    /// <summary>
-    /// 최초 발각 시 1.0초간 정지 후 경고 사격 1발 발사
-    /// </summary>
-    private IEnumerator InitialAlertShotRoutine()
+    private IEnumerator MeleeAttackRoutine()
     {
-        hasTriggeredInitialAlertShot = true;
-        isAimingOrAttacking = true;
-        agent.isStopped = true;
+        isAttacking = true;
+        agent.isStopped = true; // 단검을 내리치는 0.6초 동안만 잠시 정지!
 
-        Debug.Log($"🚨 [{gameObject.name}] 발각! 제자리에 멈춰서 조준 시작!");
-        yield return new WaitForSeconds(0.6f);
-
-        FireSingleShotWithSpread(); // 경고 사격 1발
-
-        yield return new WaitForSeconds(0.4f);
-        agent.isStopped = false;
-        isAimingOrAttacking = false;
-    }
-
-    /// <summary>
-    /// 근접 단검 공격 루틴
-    /// </summary>
-    private IEnumerator PerformMeleeAttackRoutine()
-    {
-        isAimingOrAttacking = true;
-        lastMeleeTime = Time.time;
-
-        Debug.Log($"🗡️ [{gameObject.name}] 쉭! 단검 베기 공격! (데미지: {meleeDamage})");
-        yield return new WaitForSeconds(0.3f);
-
-        isAimingOrAttacking = false;
-    }
-
-    /// <summary>
-    /// 이동 정지 ➔ 0.4초 조준(중간 이탈 검사) ➔ 권총 2연사 탕! 탕! ➔ 이동 재개
-    /// </summary>
-    private IEnumerator PerformAimAndRangedBurstRoutine()
-    {
-        isAimingOrAttacking = true;
-        agent.isStopped = true; // 🎯 사격 조준 중 이동 완전 정지!
-
-        Debug.Log($"🎯 [{gameObject.name}] 멈춰서 0.4초간 조준 중...");
-
-        // 0.4초 조준 시간 동안 플레이어가 벽 뒤로 숨거나 16m 밖으로 나가면 조준 취소!
-        float timer = 0f;
-        while (timer < aimDuration)
+        // 순간적으로 플레이어 정면을 부드럽게 바라봄
+        Vector3 dirToPlayer = (playerTransform.position - transform.position).normalized;
+        dirToPlayer.y = 0;
+        if (dirToPlayer != Vector3.zero)
         {
-            timer += Time.deltaTime;
-            float currentDist = Vector3.Distance(transform.position, targetPlayer.transform.position);
-
-            // 조준 취소 조건 (벽 뒤로 숨거나 16m 유지 사거리 이탈)
-            if (!fov.CanSeePlayer || currentDist > rangedKeepRange)
-            {
-                Debug.Log($"❌ [{gameObject.name}] 조준 취소! (시야 차단 또는 16m 이탈)");
-                agent.isStopped = false;
-                isAimingOrAttacking = false;
-                yield break;
-            }
-
-            // 조준 중 플레이어를 부드럽게 바라봄
-            Vector3 lookDir = (targetPlayer.transform.position - transform.position).normalized;
-            lookDir.y = 0;
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
-            }
-
-            yield return null;
+            transform.rotation = Quaternion.LookRotation(dirToPlayer);
         }
 
-        // 🎯 0.4초 조준 완료! 2연사 사격! (탕! ... 탕!)
-        FireSingleShotWithSpread();
-        yield return new WaitForSeconds(0.15f);
-        FireSingleShotWithSpread();
+        Debug.Log($"🗡️ [{gameObject.name}] 단검 공격 시도!");
+        yield return new WaitForSeconds(meleeWindUpTime);
 
-        lastRangedTime = Time.time;
-        agent.isStopped = false; // 이동 재개
-        isAimingOrAttacking = false;
-    }
-
-    /// <summary>
-    /// 명중률 오차(Accuracy Spread)가 적용된 단발 사격
-    /// </summary>
-    private void FireSingleShotWithSpread()
-    {
-        Vector3 fireOrigin = gunMuzzle != null ? gunMuzzle.position : transform.position + Vector3.up * 1.2f;
-        Vector3 targetPos = targetPlayer.transform.position + Vector3.up * 1.0f;
-        Vector3 baseDir = (targetPos - fireOrigin).normalized;
-
-        // 🎯 [핵심] 랜덤 오차(Accuracy Spread) 적용
-        Vector3 spreadOffset = Random.insideUnitSphere * accuracySpread;
-        Vector3 finalDir = (baseDir + spreadOffset).normalized;
-
-        // 레이캐스트 및 시각화 디버그 선
-        if (Physics.Raycast(fireOrigin, finalDir, out RaycastHit hit, rangedKeepRange))
+        // 실시간 명중 판정 (유격 +0.3m)
+        float currentDist = Vector3.Distance(transform.position, playerTransform.position);
+        if (currentDist <= meleeAttackRange + 0.3f)
         {
-            Debug.DrawLine(fireOrigin, hit.point, Color.red, 0.25f);
+            Debug.Log($"💥 [{gameObject.name}] 단검 타격 명중! (데미지: {meleeDamage})");
 
-            if (hit.transform.CompareTag("Player"))
+            // 플레이어 Health 컴포넌트에 데미지 전달
+            PlayerHealth playerHealth = playerTransform.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
             {
-                Debug.Log($"💥 [{gameObject.name}] 탕! 권총 명중! (데미지: {rangedDamage})");
-            }
-            else
-            {
-                Debug.Log($"💨 [{gameObject.name}] 빗나감! (벽/바닥 피격: {hit.transform.name})");
+                playerHealth.TakeDamage(meleeDamage);
             }
         }
         else
         {
-            Debug.DrawRay(fireOrigin, finalDir * rangedKeepRange, Color.yellow, 0.25f);
+            Debug.Log($"💨 [{gameObject.name}] 플레이어 회피 성공!");
         }
+
+        yield return new WaitForSeconds(meleeRecoveryTime);
+
+        lastAttackTime = Time.time;
+        agent.isStopped = false; // 🎯 공격 종료 즉시 이동 풀기! EnemyAI가 추격을 이어받음
+        isAttacking = false;
     }
-
-    #endregion
-
-    #region Health & Damage
-
-    public void TakeDamage(float damage)
-    {
-        if (isDead) return;
-
-        currentHealth -= damage;
-        Debug.Log($"🩸 [{gameObject.name}] 피격! 남은 체력: {currentHealth}/{maxHealth}");
-
-        if (targetPlayer != null && enemyAI.CurrentState != EnemyAI.State.Alerted)
-        {
-            enemyAI.TriggerAlert(targetPlayer.transform.position);
-        }
-
-        if (currentHealth <= 0f)
-        {
-            Die();
-        }
-    }
-
-    private void Die()
-    {
-        isDead = true;
-        Debug.Log($"💀 [{gameObject.name}] 적 처치 완료!");
-
-        if (ammoItemPrefab != null)
-        {
-            Vector3 dropPos = transform.position + Vector3.up * 0.5f;
-            Instantiate(ammoItemPrefab, dropPos, Quaternion.identity);
-            Debug.Log($"🎁 [{gameObject.name}] AmmoItem 드랍 완료!");
-        }
-
-        enemyAI.enabled = false;
-        if (agent != null) agent.enabled = false;
-
-        Destroy(gameObject, 0.5f);
-    }
-
-    #endregion
 }

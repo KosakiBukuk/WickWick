@@ -177,4 +177,20 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 주변 적들의 FieldOfView 센서로 소음 파동을 발산하는 메서드
+    /// </summary>
+   /* public void EmitNoise(float radius, FieldOfView.NoiseType noiseType)
+    {
+        Collider[] nearbyCols = Physics.OverlapSphere(transform.position, radius);
+        foreach (var col in nearbyCols)
+        {
+            FieldOfView fov = col.GetComponent<FieldOfView>();
+            if (fov != null)
+            {
+                fov.ListenNoise(transform.position, radius, noiseType);
+            }
+        }
+    } */
+
 }
