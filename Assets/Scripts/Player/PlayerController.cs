@@ -23,6 +23,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float standingHeight = 2.0f;
     [SerializeField] private float crouchingHeight = 1.0f;
     [SerializeField] private float crouchTransitionSpeed = 10.0f;
+    [SerializeField] private float standingCameraY = 1.6f;  // 🎯 서 있을 때 기준 카메라 높이 (명시적 고정)
+    [SerializeField] private float crouchingCameraY = 0.8f; // 🎯 앉았을 때 기준 카메라 높이 (명시적 고정)
 
     [Header("Visual Mesh (Optional)")]
     [SerializeField] private Transform visualMesh; // 바닥 뚫림 방지용 캡슐 메쉬 Transform
@@ -33,9 +35,6 @@ public class PlayerController : MonoBehaviour
 
     private bool isCrouching = false;
     private bool isSprinting = false;
-
-    private float standingCameraY = 1.6f;
-    private float crouchingCameraY = 0.8f;
 
     public bool IsCrouching => isCrouching;
     public bool IsSprinting => isSprinting;
@@ -50,10 +49,12 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        // 🎯 [수정 1] 시작 시 카메라 위치를 정확한 기본 서기 높이(1.6f)로 보정!
         if (playerCamera != null)
         {
-            standingCameraY = playerCamera.localPosition.y;
-            crouchingCameraY = standingCameraY * (crouchingHeight / standingHeight);
+            Vector3 initialCamPos = playerCamera.localPosition;
+            initialCamPos.y = standingCameraY;
+            playerCamera.localPosition = initialCamPos;
         }
     }
 
@@ -102,7 +103,7 @@ public class PlayerController : MonoBehaviour
             }
             else if (sprintKey)
             {
-                isSprinting = true;
+                isSprinting = sprintKey;
             }
         }
     }
@@ -151,46 +152,26 @@ public class PlayerController : MonoBehaviour
     private void HandleCrouchHeight()
     {
         float targetHeight = isCrouching ? crouchingHeight : standingHeight;
+        float targetCamY = isCrouching ? crouchingCameraY : standingCameraY;
 
-        // 🎯 [핵심 수정 2] 목표 높이와 실제 높이에 차이가 있을 때만 Lerp 및 center/mesh 보정 수행!
-        if (Mathf.Abs(controller.height - targetHeight) > 0.001f)
+        // 🎯 [수정 2] 끊김 조건문 제거! 끊김 없이 1.0m <-> 2.0m 부드럽게 Lerp 전환
+        controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
+        controller.center = new Vector3(0, controller.height / 2f, 0);
+
+        // 🎯 [수정 3] 카메라 높이 정확하게 Lerp 연동
+        if (playerCamera != null)
         {
-            controller.height = Mathf.Lerp(controller.height, targetHeight, Time.deltaTime * crouchTransitionSpeed);
-            controller.center = new Vector3(0, controller.height / 2f, 0);
+            Vector3 camPos = playerCamera.localPosition;
+            camPos.y = Mathf.Lerp(camPos.y, targetCamY, Time.deltaTime * crouchTransitionSpeed);
+            playerCamera.localPosition = camPos;
+        }
 
-            // 카메라 높이 연동
-            if (playerCamera != null)
-            {
-                float targetCamY = isCrouching ? crouchingCameraY : standingCameraY;
-                Vector3 camPos = playerCamera.localPosition;
-                camPos.y = Mathf.Lerp(camPos.y, targetCamY, Time.deltaTime * crouchTransitionSpeed);
-                playerCamera.localPosition = camPos;
-            }
-
-            // 메쉬 위치 보정
-            if (visualMesh != null)
-            {
-                Vector3 meshPos = visualMesh.localPosition;
-                meshPos.y = controller.height / 2f;
-                visualMesh.localPosition = meshPos;
-            }
+        // 🎯 [수정 4] 캡슐 메쉬 Y 스케일 및 위치를 동시에 축소하여 바닥 뚫림 완벽 차단!
+        if (visualMesh != null)
+        {
+            float meshScaleY = controller.height / standingHeight; // 높이 비율 계산
+            visualMesh.localScale = new Vector3(1f, meshScaleY, 1f);
+            visualMesh.localPosition = new Vector3(0f, controller.height / 2f, 0f);
         }
     }
-
-    /// <summary>
-    /// 주변 적들의 FieldOfView 센서로 소음 파동을 발산하는 메서드
-    /// </summary>
-   /* public void EmitNoise(float radius, FieldOfView.NoiseType noiseType)
-    {
-        Collider[] nearbyCols = Physics.OverlapSphere(transform.position, radius);
-        foreach (var col in nearbyCols)
-        {
-            FieldOfView fov = col.GetComponent<FieldOfView>();
-            if (fov != null)
-            {
-                fov.ListenNoise(transform.position, radius, noiseType);
-            }
-        }
-    } */
-
 }
