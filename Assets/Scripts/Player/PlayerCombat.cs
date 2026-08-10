@@ -1,9 +1,8 @@
 using System;
-using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 플레이어 근접 단검 공격, 백스탭 타격, 상호작용 및 투척 전담 모듈 (총기 기능 제거완료)
+/// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
@@ -22,14 +21,13 @@ public class PlayerCombat : MonoBehaviour
 
     [Header("Throwable Settings")]
     [SerializeField] private Transform throwPoint;
-    [SerializeField] private float throwForce = 15.0f;
+    [SerializeField] private float throwForce = 12.0f;
+    [SerializeField] private float throwUpwardForce = 2.5f; // 자연스러운 포물선 투척 힘
     [SerializeField] private float pickupRange = 2.5f;
 
-    private GameObject currentThrowablePrefab;
-    private bool hasThrowable = false;
-
+    private GameObject currentThrowablePrefab; // 습득한 투척물의 발사용 프리팹
+    private bool hasThrowable = false;          // 최대 소지 수량: 1개
     private float lastDaggerTime = -999f;
-    private WeaponType previousWeapon = WeaponType.Dagger;
 
     public event Action<WeaponType> OnWeaponChanged;
     public event Action OnAttack;
@@ -44,11 +42,12 @@ public class PlayerCombat : MonoBehaviour
         if (playerCamera == null)
             playerCamera = Camera.main.transform;
 
+        // ThrowPoint가 없을 경우 카메라 전방에 자동 생성
         if (throwPoint == null && playerCamera != null)
         {
             GameObject autoPoint = new GameObject("AutoThrowPoint");
             autoPoint.transform.SetParent(playerCamera);
-            autoPoint.transform.localPosition = new Vector3(0f, -0.2f, 0.8f);
+            autoPoint.transform.localPosition = new Vector3(0.2f, -0.2f, 0.6f);
             autoPoint.transform.localRotation = Quaternion.identity;
             throwPoint = autoPoint.transform;
             Debug.Log("🎯 [PlayerCombat] ThrowPoint가 비어있어 카메라 정면에 자동 생성했습니다!");
@@ -62,14 +61,15 @@ public class PlayerCombat : MonoBehaviour
         HandleInteraction();
     }
 
+    /// <summary>
+    /// 1번 키(단검), 2번 키(투척물 - 소지 시에만) 슬롯 교체
+    /// </summary>
     private void HandleWeaponSwitch()
     {
-        // 1번 키: 단검 장착
         if (Input.GetKeyDown(KeyCode.Alpha1) && currentWeapon != WeaponType.Dagger)
         {
             SwitchWeapon(WeaponType.Dagger);
         }
-        // 2번 키: 투척물 장착
         else if (Input.GetKeyDown(KeyCode.Alpha2) && currentWeapon != WeaponType.Throwable)
         {
             if (hasThrowable)
@@ -85,16 +85,14 @@ public class PlayerCombat : MonoBehaviour
 
     private void SwitchWeapon(WeaponType newWeapon)
     {
-        if (currentWeapon != WeaponType.Throwable)
-        {
-            previousWeapon = currentWeapon;
-        }
-
         currentWeapon = newWeapon;
         OnWeaponChanged?.Invoke(currentWeapon);
         Debug.Log($"🔄 [무기 교체] 현재 슬롯: {currentWeapon}");
     }
 
+    /// <summary>
+    /// 마우스 좌클릭 시 슬롯 상태에 따라 공격 또는 투척 실행
+    /// </summary>
     private void HandleAttack()
     {
         if (Input.GetMouseButtonDown(0))
@@ -131,7 +129,6 @@ public class PlayerCombat : MonoBehaviour
 
             Debug.Log($"🗡️ 단검 명중! ({hit.collider.name}) | 백스탭: {isBackstab} | 데미지: {damage}");
 
-            // 🎯 적 부모 오브젝트의 EnemyHealth를 찾아 실시간 데미지 가하기!
             EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
             if (enemyHealth != null && !enemyHealth.IsDead)
             {
@@ -140,14 +137,9 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    public void PickupThrowable(GameObject prefab)
-    {
-        hasThrowable = true;
-        currentThrowablePrefab = prefab;
-        OnThrowableStateChanged?.Invoke(true);
-        Debug.Log($"📦 [상호작용] {prefab.name} 획득! (2번 키로 장착 가능)");
-    }
-
+    /// <summary>
+    /// E키 입력 시 레이캐스트로 IInteractable(벽돌 등) 탐색 및 상호작용
+    /// </summary>
     private void HandleInteraction()
     {
         if (Input.GetKeyDown(KeyCode.E))
@@ -164,6 +156,30 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// IInteractable 오브젝트에서 습득 성공 시 호출
+    /// </summary>
+    public bool PickupThrowable(GameObject prefab)
+    {
+        if (hasThrowable)
+        {
+            Debug.Log("🎒 이미 투척물을 소지하고 있습니다!");
+            return false;
+        }
+
+        hasThrowable = true;
+        currentThrowablePrefab = prefab;
+        OnThrowableStateChanged?.Invoke(true);
+
+        // 습득 시 편의성을 위해 즉시 투척물 슬롯으로 전환!
+        SwitchWeapon(WeaponType.Throwable);
+        Debug.Log($"📦 [상호작용] {prefab.name} 획득 완료! (2번 슬롯 장착됨)");
+        return true;
+    }
+
+    /// <summary>
+    /// 투척물 발사 후 소지 해제 및 단검 슬롯 원복
+    /// </summary>
     private void ThrowObject()
     {
         if (currentThrowablePrefab == null || throwPoint == null || !hasThrowable) return;
@@ -172,6 +188,7 @@ public class PlayerCombat : MonoBehaviour
         OnThrowableStateChanged?.Invoke(false);
         OnThrow?.Invoke();
 
+        // 물리 투척물 인스턴스화
         GameObject thrownObj = Instantiate(currentThrowablePrefab, throwPoint.position, throwPoint.rotation);
 
         Rigidbody rb = thrownObj.GetComponent<Rigidbody>();
@@ -180,11 +197,14 @@ public class PlayerCombat : MonoBehaviour
             rb = thrownObj.AddComponent<Rigidbody>();
         }
 
-        rb.AddForce(playerCamera.forward * throwForce, ForceMode.Impulse);
+        // 전방 힘 + 상향 포물선 힘 가하기
+        Vector3 throwDirection = playerCamera.forward * throwForce + Vector3.up * throwUpwardForce;
+        rb.AddForce(throwDirection, ForceMode.Impulse);
 
-        Debug.Log($"🧱 {currentThrowablePrefab.name} 투척 완료!");
+        Debug.Log($"💥 {currentThrowablePrefab.name} 투척 완료!");
 
+        // 사용 후 데이터 비우고 기본 단검 슬롯으로 자동 복귀
         currentThrowablePrefab = null;
-        SwitchWeapon(previousWeapon);
+        SwitchWeapon(WeaponType.Dagger);
     }
 }

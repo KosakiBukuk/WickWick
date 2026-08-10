@@ -156,9 +156,10 @@ GameObject:
   - component: {fileID: 2216826412808308301}
   - component: {fileID: 8254330568973806286}
   - component: {fileID: 5614687306440606021}
-  - component: {fileID: 7058039580797740528}
   - component: {fileID: 2190971601343810608}
   - component: {fileID: 6023167756670377870}
+  - component: {fileID: 2157371167489700143}
+  - component: {fileID: 2271523671027112516}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -176,7 +177,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: -21.68979, y: 4.27, z: 13.428}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 1.3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8870329944961666580}
@@ -279,40 +280,12 @@ NavMeshAgent:
   m_AngularSpeed: 120
   m_StoppingDistance: 0
   m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
+  m_AutoBraking: 0
   m_AutoRepath: 1
   m_Height: 2
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!114 &7058039580797740528
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6685654599679038711}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f214e7148c6af941bc3504910ef31d7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FieldOfView
-  viewRadius: 15
-  viewAngle: 90
-  targetMask:
-    serializedVersion: 2
-    m_Bits: 8
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 64
-  eyeTransform: {fileID: 3307826686891683816}
-  baseDetectionSpeed: 1
-  crouchMultiplier: 0.4
-  sprintMultiplier: 1.8
-  suspiciousDetectionMultiplier: 2
-  showDebugFOV: 1
-  meshResolution: 30
-  meshHeightOffset: 0.05
 --- !u!114 &2190971601343810608
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -330,21 +303,12 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   patrolSpeed: 2
-  waypointWaitTime: 2
-  suspiciousSpeedMultiplier: 0.6
-  maxInvestigateDistance: 4
-  lookAroundAngle: 45
-  lookAroundWaitTime: 2
+  suspiciousSpeed: 2.8
+  suspiciousThreshold: 30
   chaseSpeed: 4.5
-  alertBroadcastRadius: 15
   alertMemoryTime: 2.5
-  maxChaseDistance: 35
-  proximityAlertRadius: 3
   currentDetectionGauge: 0
   gaugeDecaySpeed: 25
-  suspiciousThreshold: 30
-  noiseGaugeBoost: 35
-  suspiciousHoldTime: 6.5
 --- !u!114 &6023167756670377870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -357,16 +321,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b9664c1c6aca2944adc4c519b2d3774, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombat
+  meleeAttackRange: 2
+  meleeDamage: 25
+  meleeWindUpTime: 0.25
+  meleeRecoveryTime: 0.35
+  meleeCooldown: 1.2
+--- !u!114 &2157371167489700143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6685654599679038711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32a56b3f86dbce94e9a666f7978b1031, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FieldOfView
+  baseViewRadius: 8
+  baseViewAngle: 90
+  meshResolution: 30
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 64
+  baseColor: {r: 1, g: 0.92, b: 0.016, a: 0.25}
+  fillColor: {r: 1, g: 0.5, b: 0, a: 0.45}
+  alertColor: {r: 1, g: 0, b: 0, a: 0.35}
+--- !u!114 &2271523671027112516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6685654599679038711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0711a717319b5f4190e37a8cc051906, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 100
   currentHealth: 100
-  meleeAttackRange: 2
-  rangedStartRange: 12
-  rangedKeepRange: 16
-  meleeDamage: 25
-  meleeCooldown: 1.2
-  rangedDamage: 15
-  aimDuration: 0.4
-  fireRateCooldown: 1.5
-  accuracySpread: 0.08
-  gunMuzzle: {fileID: 0}
-  ammoItemPrefab: {fileID: 7013984915824814013, guid: c265d9ac7dd0669438e585ba45b4e8af, type: 3}

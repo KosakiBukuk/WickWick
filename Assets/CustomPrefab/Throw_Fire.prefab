@@ -66,14 +66,44 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3916591592389668420, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
       insertIndex: -1
-      addedObject: {fileID: -8470716936793416191}
+      addedObject: {fileID: 7918796445717020163}
+    - targetCorrespondingSourceObject: {fileID: 3916591592389668420, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4736679879091125910}
   m_SourcePrefab: {fileID: 100100000, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
 --- !u!1 &7013984915824814013 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3916591592389668420, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
   m_PrefabInstance: {fileID: 6272433821321611769}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &-8470716936793416191
+--- !u!54 &7918796445717020163
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7013984915824814013}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &4736679879091125910
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -85,4 +115,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 401a107451557174883fbf7ef3642c4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThrowableItem
-  throwablePrefab: {fileID: 0}
+  noiseRadius: 8
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  minImpactVelocity: 1.5

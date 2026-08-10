@@ -1,52 +1,55 @@
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 /// <summary>
-/// 인스펙터 세팅 없이도 자기 자신의 원본 프리팹을 자동으로 찾아내는 스마트 투척 스크립트
+/// 던져서 바닥/벽에 충돌 시 소음을 발산하여 적을 유인하는 투척물 스크립트
 /// </summary>
-public class ThrowableItem : MonoBehaviour, IInteractable
+[RequireComponent(typeof(Rigidbody), typeof(Collider))]
+public class ThrowableItem : MonoBehaviour
 {
-    [Header("Throwable Settings (비워두면 자동 감지!)")]
-    [SerializeField] private GameObject throwablePrefab;
+    [Header("Noise Settings")]
+    [SerializeField] private float noiseRadius = 12.0f; // 소음이 도달하는 반경 (미터)
+    [SerializeField] private LayerMask enemyLayer;      // 적 AI가 속한 Layer
+    [SerializeField] private float minImpactVelocity = 1.5f; // 소음이 발생하는 최소 충돌 속도
 
-    public void Interact(GameObject interactor)
+    private bool hasLanded = false; // 중복 소음 발생 방지 플래그
+
+    private void OnCollisionEnter(Collision collision)
     {
-        PlayerCombat combat = interactor.GetComponent<PlayerCombat>();
+        // 이미 한번 바닥에 떨어져 소음을 냈다면 중복 발생 차단
+        if (hasLanded) return;
 
-        if (combat != null)
+        // 슬그머니 놓인 게 아니라 일정 속도 이상으로 쾅 부딪혔을 때만 소음 발생
+        if (collision.relativeVelocity.magnitude >= minImpactVelocity)
         {
-            if (combat.HasThrowable)
-            {
-                Debug.Log("⚠️ 이미 투척 오브젝트를 소지하고 있습니다!");
-                return;
-            }
+            hasLanded = true;
+            EmitNoise(transform.position);
 
-            // 🎯 1. 인스펙터가 비어있다면, 현재 씬 물체의 '원본 프리팹 파일'을 자동 추적!
-            GameObject prefabToPass = throwablePrefab;
-
-            if (prefabToPass == null)
-            {
-#if UNITY_EDITOR
-                // 에디터 상에서 씬 오즈젝트의 원본 프리팹 자산을 자동으로 찾아옴!
-                prefabToPass = PrefabUtility.GetCorrespondingObjectFromSource(gameObject);
-#endif
-            }
-
-            // 🎯 2. 그래도 프리팹을 못 찾으면 자기 자신을 비활성화(Hide)해서 안전하게 전달
-            if (prefabToPass == null)
-            {
-                gameObject.SetActive(false);
-                prefabToPass = gameObject;
-            }
-            else
-            {
-                // 원본 프리팹을 성공적으로 찾았다면 씬의 물체는 제거!
-                Destroy(gameObject);
-            }
-
-            combat.PickupThrowable(prefabToPass);
+            // 💡 추후 충돌 사운드(SFX) 및 먼지 이펙트(FX)를 여기서 재생하면 돼!
+            Debug.Log($"💥 [{gameObject.name}] 소음 발생! 위치: {transform.position}");
         }
+    }
+
+    /// <summary>
+    /// 지정된 위치에서 overlapSphere로 주변 적을 찾아 소음을 전달함
+    /// </summary>
+    private void EmitNoise(Vector3 impactPosition)
+    {
+        Collider[] enemies = Physics.OverlapSphere(impactPosition, noiseRadius, enemyLayer);
+        foreach (Collider enemyCol in enemies)
+        {
+            // 자식 콜라이더 피격 시에도 부모의 EnemyAI 컴포넌트 탐색
+            EnemyAI enemy = enemyCol.GetComponentInParent<EnemyAI>();
+            if (enemy != null)
+            {
+                enemy.OnHearNoise(impactPosition);
+            }
+        }
+    }
+
+    // 씬 뷰에서 소음 범위를 초록색 구체로 시각화 (디버깅용)
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, noiseRadius);
     }
 }

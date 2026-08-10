@@ -268,4 +268,37 @@ public class EnemyAI : MonoBehaviour
             }
         }
     }
+
+    // EnemyAI.cs 클래스 내부에 아래 메서드를 추가해 줘!
+
+    /// <summary>
+    /// 외부 소음(벽돌 낙하 등)을 들었을 때 호출되는 소음 수신 메서드
+    /// </summary>
+    /// <param name="noisePosition">소음이 발생한 월드 좌표</param>
+    public void OnHearNoise(Vector3 noisePosition)
+    {
+        // 이미 발각(Alerted)되어 전투 중이라면 소음에 신경 쓰지 않음
+        if (currentState == State.Alerted) return;
+
+        // 1. 소음 발생 지점으로 수색 목표 위치(LKP) 설정
+        lastKnownPosition = noisePosition;
+
+        // 2. 감지 게이지를 Suspicious 진입 임계값(35%) 이상으로 즉시 상향!
+        if (currentDetectionGauge < 35f)
+        {
+            currentDetectionGauge = 35f;
+        }
+
+        // 3. FSM 상태를 Suspicious(의심)로 전환
+        SetState(State.Suspicious);
+
+        // 4. 소음 발생 지점으로 NavMeshAgent 이동 명령 및 도착 후 4.5초 두리번 수색 실행!
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.speed = patrolSpeed * 1.2f; // 의심 수색 속도로 설정 (약 60% 속도)
+            agent.SetDestination(noisePosition);
+        }
+
+        Debug.Log($"👂 [{gameObject.name}] 소음을 감지함! 수색 지점: {noisePosition}");
+    }
 }
