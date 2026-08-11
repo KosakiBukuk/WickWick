@@ -31,6 +31,16 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float currentDetectionGauge = 0f;
     [SerializeField] private float gaugeDecaySpeed = 20f;
 
+    [Header("Stationary Guard Sweep Settings")]
+    [Tooltip("체크 시 제자리에서 좌우로 고개를 돌리며 정찰합니다. (해제 시 정면 고정)")]
+    [SerializeField] private bool enableSweep = true; // 🎯 좌우 정찰 온/오프 스위치!
+
+    [Tooltip("좌우로 회전할 최대 각도 (예: 45도 지정 시 -45도 ~ +45도 회전)")]
+    [SerializeField] private float sweepAngle = 45f;
+
+    [Tooltip("고개를 돌리는 회전 속도")]
+    [SerializeField] private float sweepSpeed = 1.5f;
+
     private NavMeshAgent agent;
     private FieldOfView fov;
     private Transform playerTransform;
@@ -62,7 +72,18 @@ public class EnemyAI : MonoBehaviour
         agent.acceleration = 40f;
         agent.autoBraking = false;
 
-        // 🎯 시작 시 Patrol 상태로 초기화하여 첫 목적지 설정
+        // 🎯 [핵심] 웨이포인트가 1개일 때, 시작하자마자 해당 위치를 바라보도록 초기 회전 세팅
+        if (waypoints != null && waypoints.Length == 1 && waypoints[0] != null)
+        {
+            Vector3 dir = (waypoints[0].position - transform.position).normalized;
+            dir.y = 0; // 고개가 위아래로 꺾이지 않도록 평면 보정!
+
+            if (dir != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(dir);
+            }
+        }
+
         SetState(State.Patrol);
     }
 
@@ -177,20 +198,61 @@ public class EnemyAI : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 [수정 완료] 도착 조건식을 agent.stoppingDistance 기반으로 안전하게 계산!
+    /// 🎯 [수정 완료] enableSweep 체크 유무에 따라 좌우 정찰 / 정면 고정 선택 가능!
     /// </summary>
     private void UpdatePatrol()
     {
         if (waypoints == null || waypoints.Length == 0) return;
 
-        // 경로 계산이 끝났고, 남은 거리가 (정지거리 + 0.3m) 이하일 때 다음 웨이포인트로 전환!
+        // 🎯 1개짜리 제자리 문지기 웨이포인트일 때
+        if (waypoints.Length == 1)
+        {
+            if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
+            {
+                // 기준이 되는 기본 정면 방향 계산 (웨이포인트 위치 바라보기)
+                Vector3 baseDir = (waypoints[0].position - transform.position).normalized;
+                baseDir.y = 0; // 평면 보정
+
+                if (baseDir != Vector3.zero)
+                {
+                    Quaternion baseRotation = Quaternion.LookRotation(baseDir);
+
+                    // 🎯 [핵심] enableSweep 이 체크되어 있을 때만 좌우로 두리번거림!
+                    if (enableSweep)
+                    {
+                        float currentAngle = Mathf.Sin(Time.time * sweepSpeed) * sweepAngle;
+                        Quaternion sweepRotation = baseRotation * Quaternion.Euler(0f, currentAngle, 0f);
+
+                        transform.rotation = Quaternion.Slerp(
+                            transform.rotation,
+                            sweepRotation,
+                            Time.deltaTime * 5f
+                        );
+                    }
+                    // 🎯 enableSweep 체크가 해제되어 있으면 지정된 위치만 묵직하게 고정 감시!
+                    else
+                    {
+                        if (Quaternion.Angle(transform.rotation, baseRotation) > 0.1f)
+                        {
+                            transform.rotation = Quaternion.Slerp(
+                                transform.rotation,
+                                baseRotation,
+                                Time.deltaTime * 5f
+                            );
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // 🎯 2개 이상 순찰형 웨이포인트일 때
         if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
         {
             currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
             agent.SetDestination(waypoints[currentWaypointIndex].position);
         }
     }
-
     private IEnumerator SuspiciousRoutine()
     {
         isInvestigating = true;
