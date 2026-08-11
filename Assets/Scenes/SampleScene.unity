@@ -437,6 +437,16 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b9206750b4b7a6042b3fb6e6d3a9fde2, type: 3}
+--- !u!4 &13546946 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 98910620}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &13582154 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 1664602043}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &19685017 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4530954821320336, guid: 0d64e8ec59690cc4c88c574de5243c33, type: 3}
@@ -724,6 +734,11 @@ GameObject:
 Transform:
   m_CorrespondingSourceObject: {fileID: 5158982721635382198, guid: de45e9377a053454da9147ad965c3661, type: 3}
   m_PrefabInstance: {fileID: 1280219072}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &38670827 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 128728207}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &41748124 stripped
 GameObject:
@@ -2025,6 +2040,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 13546946}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (1)
@@ -2538,6 +2557,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 38670827}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (1)
@@ -3373,6 +3396,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 2138891628}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (3)
@@ -5154,6 +5181,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 169471500}
   m_SourcePrefab: {fileID: 100100000, guid: 8ff786edd370edf43a23dd38daa3b08d, type: 3}
+--- !u!4 &244813851 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 1718292827}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &245454875
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7256,6 +7288,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 384987613}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (2)
@@ -7964,6 +8000,11 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0.5, z: 0}
   m_TimeToStationary: 0.5
+--- !u!4 &384987613 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 366647975}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &390624983
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15169,6 +15210,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 1481397990}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (3)
@@ -20202,6 +20247,11 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!4 &982432460 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 1960365686}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &983297735
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -25230,6 +25280,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 1546457105}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (2)
@@ -26068,6 +26122,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 2063748277}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (2)
@@ -26636,6 +26694,11 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!4 &1306114955 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 6022584850990980648}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1306238293
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -30172,6 +30235,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1546114843}
   m_SourcePrefab: {fileID: 100100000, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
+--- !u!4 &1481397990 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 718563718}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1484189828
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -31803,6 +31871,11 @@ MonoBehaviour:
 Transform:
   m_CorrespondingSourceObject: {fileID: 4400394938959443198, guid: 5e5d52bbee2e017479be2779408c2b71, type: 3}
   m_PrefabInstance: {fileID: 1479327115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1546457105 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 1220204921}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1550190538
 PrefabInstance:
@@ -33886,6 +33959,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 13582154}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (5)
@@ -35548,6 +35625,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 244813851}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (3)
@@ -39225,7 +39306,7 @@ Transform:
   m_GameObject: {fileID: 1934939200}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -85.94, y: 17.11, z: 23.83}
+  m_LocalPosition: {x: 46.07, y: 1.31, z: -119.79}
   m_LocalScale: {x: 1, y: 1.3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -40194,6 +40275,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 982432460}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy (4)
@@ -42535,6 +42620,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2426adc0637995045b75714d0d4370ca, type: 3}
+--- !u!4 &2063748277 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 1280219072}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2064704992
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -43527,6 +43617,11 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0.88100004, z: 0}
   m_TimeToStationary: 0.5
+--- !u!4 &2138891628 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3873969436259319232, guid: de45e9377a053454da9147ad965c3661, type: 3}
+  m_PrefabInstance: {fileID: 165794749}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2139394808 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7281321720134961716, guid: 844e97e06b23ee5478fbb4fa96361a02, type: 3}
@@ -43971,6 +44066,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6605511240163288205, guid: de45e9377a053454da9147ad965c3661, type: 3}
+      propertyPath: visualMesh
+      value: 
+      objectReference: {fileID: 1306114955}
     - target: {fileID: 6685654599679038711, guid: de45e9377a053454da9147ad965c3661, type: 3}
       propertyPath: m_Name
       value: Enemy
