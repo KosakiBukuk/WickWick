@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [최종 최적화] 기둥/벽 모퉁이 우회 예측 추격 및 Alerted -> Suspicious 자연스러운 연동 AI
+/// [최종 버그 수정완료] 추격 끊김 해결 & 순찰(Patrol) 웨이포인트 정상 작동 AI
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(FieldOfView))]
@@ -25,6 +25,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Chase Settings")]
     [SerializeField] private float chaseSpeed = 4.5f;
     [SerializeField] private float alertMemoryTime = 4.0f; // 시야 이탈 후 수색 전환 대기시간 (4초)
+    [SerializeField] private float repathRate = 0.15f;     // 0.15초마다 경로 재계산 (추격 끊김 방지)
 
     [Header("Detection Gauge Settings")]
     [SerializeField] private float currentDetectionGauge = 0f;
@@ -35,10 +36,11 @@ public class EnemyAI : MonoBehaviour
     private Transform playerTransform;
     private int currentWaypointIndex = 0;
     private Vector3 lastKnownPosition;
-    private Vector3 lastPlayerDirection; // 🎯 플레이어의 마지막 이동 방향
+    private Vector3 lastPlayerDirection;
     private bool isInvestigating = false;
-    private bool isFromAlerted = false;   // 🎯 Alerted 상태에서 넘어왔는지 여부
+    private bool isFromAlerted = false;
     private float lostSightTimer = 0f;
+    private float repathTimer = 0f;
 
     public State CurrentState => currentState;
     public float CurrentDetectionGauge => currentDetectionGauge;
@@ -58,14 +60,10 @@ public class EnemyAI : MonoBehaviour
         agent.updateRotation = true;
         agent.angularSpeed = 1000f;
         agent.acceleration = 40f;
-        agent.stoppingDistance = 0f;
         agent.autoBraking = false;
-        agent.speed = patrolSpeed;
 
-        if (waypoints != null && waypoints.Length > 0)
-        {
-            agent.SetDestination(waypoints[0].position);
-        }
+        // 🎯 시작 시 Patrol 상태로 초기화하여 첫 목적지 설정
+        SetState(State.Patrol);
     }
 
     private void Update()
@@ -93,13 +91,12 @@ public class EnemyAI : MonoBehaviour
             {
                 lostSightTimer += Time.deltaTime;
 
-                // 4초 동안 놓쳤을 경우에만 수색(Suspicious)으로 전환
                 if (lostSightTimer >= alertMemoryTime)
                 {
                     Debug.Log($"❓ [{gameObject.name}] 4초간 놓침! 기둥 뒤 수색(Suspicious) 전환!");
                     currentDetectionGauge = suspiciousThreshold + 5f;
                     lostSightTimer = 0f;
-                    isFromAlerted = true; // 추격 중 놓침 플래그
+                    isFromAlerted = true;
                     SetState(State.Suspicious);
                     return;
                 }
@@ -138,20 +135,28 @@ public class EnemyAI : MonoBehaviour
         switch (currentState)
         {
             case State.Patrol:
+                isFromAlerted = false;
                 agent.speed = patrolSpeed;
+                agent.stoppingDistance = 0.1f; // 🎯 순찰 시에는 0.1m까지 확실히 다가가도록 설정!
                 if (waypoints != null && waypoints.Length > 0)
+                {
                     agent.SetDestination(waypoints[currentWaypointIndex].position);
+                }
                 break;
 
             case State.Suspicious:
                 agent.speed = suspiciousSpeed;
+                agent.stoppingDistance = 0.5f;
                 StartCoroutine(SuspiciousRoutine());
                 break;
 
             case State.Alerted:
+                isFromAlerted = false;
                 agent.speed = chaseSpeed;
+                agent.stoppingDistance = 0.8f; // 🎯 추격 시 플레이어 몸과 비비지 않도록 정지거리 확보
                 currentDetectionGauge = 100f;
                 lostSightTimer = 0f;
+                repathTimer = repathRate;
                 break;
         }
     }
@@ -171,11 +176,15 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 🎯 [수정 완료] 도착 조건식을 agent.stoppingDistance 기반으로 안전하게 계산!
+    /// </summary>
     private void UpdatePatrol()
     {
         if (waypoints == null || waypoints.Length == 0) return;
 
-        if (!agent.pathPending && agent.remainingDistance <= 0.3f)
+        // 경로 계산이 끝났고, 남은 거리가 (정지거리 + 0.3m) 이하일 때 다음 웨이포인트로 전환!
+        if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
         {
             currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
             agent.SetDestination(waypoints[currentWaypointIndex].position);
@@ -186,7 +195,6 @@ public class EnemyAI : MonoBehaviour
     {
         isInvestigating = true;
 
-        // 🎯 순찰 중 감지 시에만 1초 "어...?" 멈칫 연출! (추격 중 놓쳤을 때는 즉시 이동)
         if (!isFromAlerted)
         {
             agent.isStopped = true;
@@ -201,7 +209,6 @@ public class EnemyAI : MonoBehaviour
             agent.isStopped = false;
         }
 
-        // LKP 위치로 이동
         agent.SetDestination(lastKnownPosition);
 
         while (agent.pathPending || agent.remainingDistance > 0.5f)
@@ -209,7 +216,6 @@ public class EnemyAI : MonoBehaviour
             yield return null;
         }
 
-        // LKP 도착 후 4.5초간 두리번 수색
         agent.isStopped = true;
         Debug.Log($"🔍 [{gameObject.name}] LKP 도착! 4.5초간 주변 수색 중...");
 
@@ -249,53 +255,47 @@ public class EnemyAI : MonoBehaviour
     {
         if (playerTransform == null) return;
 
-        if (fov.CanSeePlayer)
+        repathTimer += Time.deltaTime;
+        if (repathTimer >= repathRate)
         {
-            agent.SetDestination(playerTransform.position);
-        }
-        else
-        {
-            // 🎯 [핵심] 시야가 막혀도 플레이어의 진행 방향으로 2.5m 더 나아가 기둥 뒤를 자연스럽게 돈다!
-            Vector3 predictedPos = lastKnownPosition + lastPlayerDirection * 2.5f;
+            repathTimer = 0f;
 
-            if (NavMesh.SamplePosition(predictedPos, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+            if (fov.CanSeePlayer)
             {
-                agent.SetDestination(hit.position);
+                agent.SetDestination(playerTransform.position);
             }
             else
             {
-                agent.SetDestination(lastKnownPosition);
+                Vector3 predictedPos = lastKnownPosition + lastPlayerDirection * 2.5f;
+
+                if (NavMesh.SamplePosition(predictedPos, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+                {
+                    agent.SetDestination(hit.position);
+                }
+                else
+                {
+                    agent.SetDestination(lastKnownPosition);
+                }
             }
         }
     }
 
-    // EnemyAI.cs 클래스 내부에 아래 메서드를 추가해 줘!
-
-    /// <summary>
-    /// 외부 소음(벽돌 낙하 등)을 들었을 때 호출되는 소음 수신 메서드
-    /// </summary>
-    /// <param name="noisePosition">소음이 발생한 월드 좌표</param>
     public void OnHearNoise(Vector3 noisePosition)
     {
-        // 이미 발각(Alerted)되어 전투 중이라면 소음에 신경 쓰지 않음
         if (currentState == State.Alerted) return;
 
-        // 1. 소음 발생 지점으로 수색 목표 위치(LKP) 설정
         lastKnownPosition = noisePosition;
 
-        // 2. 감지 게이지를 Suspicious 진입 임계값(35%) 이상으로 즉시 상향!
         if (currentDetectionGauge < 35f)
         {
             currentDetectionGauge = 35f;
         }
 
-        // 3. FSM 상태를 Suspicious(의심)로 전환
         SetState(State.Suspicious);
 
-        // 4. 소음 발생 지점으로 NavMeshAgent 이동 명령 및 도착 후 4.5초 두리번 수색 실행!
         if (agent != null && agent.isOnNavMesh)
         {
-            agent.speed = patrolSpeed * 1.2f; // 의심 수색 속도로 설정 (약 60% 속도)
+            agent.speed = patrolSpeed * 1.2f;
             agent.SetDestination(noisePosition);
         }
 

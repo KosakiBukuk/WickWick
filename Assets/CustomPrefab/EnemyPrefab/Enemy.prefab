@@ -302,13 +302,14 @@ MonoBehaviour:
   waypoints:
   - {fileID: 0}
   - {fileID: 0}
-  patrolSpeed: 2
+  patrolSpeed: 3.5
   suspiciousSpeed: 2.8
   suspiciousThreshold: 30
-  chaseSpeed: 4.5
+  chaseSpeed: 5
   alertMemoryTime: 2.5
+  repathRate: 0.15
   currentDetectionGauge: 0
-  gaugeDecaySpeed: 25
+  gaugeDecaySpeed: 40
 --- !u!114 &6023167756670377870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -325,7 +326,7 @@ MonoBehaviour:
   meleeDamage: 25
   meleeWindUpTime: 0.25
   meleeRecoveryTime: 0.35
-  meleeCooldown: 1.2
+  meleeCooldown: 1.5
 --- !u!114 &2157371167489700143
 MonoBehaviour:
   m_ObjectHideFlags: 0
