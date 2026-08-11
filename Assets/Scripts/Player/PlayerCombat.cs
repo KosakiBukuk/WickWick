@@ -3,10 +3,14 @@ using UnityEngine;
 
 /// <summary>
 /// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
+/// 🎯 [수정 완료] 앉아있는(IsCrouching) 상태 시 단검 공격 및 투척 차단 기능 추가!
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
     public enum WeaponType { Dagger, Throwable }
+
+    [Header("Script References")]
+    [SerializeField] private PlayerController playerController;
 
     [Header("Weapon Settings")]
     [SerializeField] private WeaponType currentWeapon = WeaponType.Dagger;
@@ -36,6 +40,13 @@ public class PlayerCombat : MonoBehaviour
 
     public bool HasThrowable => hasThrowable;
     public WeaponType CurrentWeapon => currentWeapon;
+
+    private void Awake()
+    {
+        // PlayerController 컴포넌트 자동 캐싱
+        if (playerController == null)
+            playerController = GetComponent<PlayerController>();
+    }
 
     private void Start()
     {
@@ -97,6 +108,13 @@ public class PlayerCombat : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            // 🎯 [핵심 추가] 플레이어가 앉아있는(IsCrouching) 상태일 때는 단검 휘두르기 및 투척 모두 불가능!
+            if (playerController != null && playerController.IsCrouching)
+            {
+                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 공격이나 투척을 할 수 없습니다!");
+                return;
+            }
+
             if (currentWeapon == WeaponType.Dagger)
             {
                 if (Time.time >= lastDaggerTime + daggerCooldown)

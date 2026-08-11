@@ -335,14 +335,21 @@ MonoBehaviour:
   waypoints:
   - {fileID: 0}
   - {fileID: 0}
-  patrolSpeed: 3.5
-  suspiciousSpeed: 2.8
+  patrolSpeed: 3
+  suspiciousSpeed: 2.5
   suspiciousThreshold: 30
-  chaseSpeed: 5
+  chaseSpeed: 4.7
   alertMemoryTime: 2.5
   repathRate: 0.15
   currentDetectionGauge: 0
   gaugeDecaySpeed: 40
+  maxDetectionDistance: 10
+  maxDistanceMultiplier: 1.5
+  minDistanceMultiplier: 0.8
+  alertPropagationRadius: 12
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 256
   enableSweep: 1
   sweepAngle: 45
   sweepSpeed: 1.5

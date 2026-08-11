@@ -62,6 +62,7 @@ public class EnemyHealth : MonoBehaviour
         if (enemyCombat != null) enemyCombat.enabled = false;
         if (fov != null) fov.enabled = false;
         if (agent != null) agent.enabled = false;
+        ScoreManager.Instance?.AddKill();
 
         Destroy(gameObject, 0.3f);
     }
