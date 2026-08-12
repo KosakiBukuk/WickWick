@@ -9,7 +9,14 @@ public class EnemyHealth : MonoBehaviour
     [Header("Health Settings")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth = 100f;
+    [Header("Death Shatter Prefab")]
+    [Tooltip("적이 죽을 때 터질 파편 프리팹 (EnemyShatterPrefab)")]
+    [SerializeField] private GameObject shatterPrefab;
+    [Tooltip("사망 위치보다 앞으로 밀어낼 거리 (미터)")]
+    [SerializeField] private float forwardOffset = 0.4f; // 🎯 요 숫자로 앞으로 튀어나갈 위치 조절!
 
+    [Tooltip("사망 위치보다 위로 띄울 높이 (미터)")]
+    [SerializeField] private float upwardOffset = 0.1f;  // 🎯 피격 높이 보정용
     private EnemyAI enemyAI;
     private EnemyCombat enemyCombat;
     private FieldOfView fov;
@@ -63,7 +70,15 @@ public class EnemyHealth : MonoBehaviour
         if (fov != null) fov.enabled = false;
         if (agent != null) agent.enabled = false;
         ScoreManager.Instance?.AddKill();
+        // 🎯 1. 사망 위치에 큐브 파편 프리팹 짠! 하고 생성!
+        if (shatterPrefab != null)
+        {
+            // 🎯 [핵심] 적의 바라보는 정면 방향(transform.forward)으로 forwardOffset 만큼 살짝 앞으로 보정!
+            Vector3 spawnPosition = transform.position + (transform.forward * forwardOffset) + (Vector3.up * upwardOffset);
 
-        Destroy(gameObject, 0.3f);
+            Instantiate(shatterPrefab, spawnPosition, transform.rotation);
+        }
+
+        Destroy(gameObject);
     }
 }

@@ -35,7 +35,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 110, y: 110}
+  m_SizeDelta: {x: 130, y: 130}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &260648999297500040
 CanvasRenderer:
@@ -537,15 +537,15 @@ MonoBehaviour:
   waypoints:
   - {fileID: 0}
   - {fileID: 0}
-  patrolSpeed: 3
-  patrolWaitTime: 1.5
+  patrolSpeed: 2.7
+  patrolWaitTime: 2.2
   suspiciousSpeed: 2.2
   suspiciousThreshold: 30
   chaseSpeed: 4.7
   alertMemoryTime: 2.5
   repathRate: 0.15
   currentDetectionGauge: 0
-  gaugeDecaySpeed: 40
+  gaugeDecaySpeed: 35
   maxDetectionDistance: 9
   maxDistanceMultiplier: 1.3
   minDistanceMultiplier: 0.8
@@ -609,6 +609,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 100
   currentHealth: 100
+  shatterPrefab: {fileID: 4993928122711038652, guid: 8739794d598cf0549995e2738e1725f2, type: 3}
 --- !u!114 &6605511240163288205
 MonoBehaviour:
   m_ObjectHideFlags: 0
