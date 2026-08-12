@@ -30,6 +30,9 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private float throwUpwardForce = 2.5f; // 자연스러운 포물선 투척 힘
     [SerializeField] private float pickupRange = 2.5f;
 
+    [Header("Weapon Motion Reference")]
+    [SerializeField] private WeaponAttack weaponAttack;
+
     private GameObject currentThrowablePrefab; // 습득한 투척물의 발사용 프리팹
     private bool hasThrowable = false;          // 최대 소지 수량: 1개
     private float lastDaggerTime = -999f;
@@ -144,6 +147,7 @@ public class PlayerCombat : MonoBehaviour
                 {
                     Debug.Log("🗡️ [PlayerCombat] 앉은 상태에서 암살 개시! 일어서며 백스탭을 실행합니다!");
                     playerController.ForceStandUp(); // 일어서기!
+                    weaponAttack.SwingWeapon();
                     PerformDaggerAttack();
                     return;
                 }
@@ -159,6 +163,7 @@ public class PlayerCombat : MonoBehaviour
                 if (Time.time >= lastDaggerTime + daggerCooldown)
                 {
                     PerformDaggerAttack();
+                    weaponAttack.SwingWeapon();
                 }
             }
             else if (currentWeapon == WeaponType.Throwable)
@@ -264,4 +269,18 @@ public class PlayerCombat : MonoBehaviour
         currentThrowablePrefab = null;
         SwitchWeapon(WeaponType.Dagger);
     }
+
+    // PlayerCombat.cs 내부
+    private void PerformAssassination(EnemyAI target)
+    {
+        // 🎯 1. 칼 휘두르기 모션 호출!
+        if (weaponAttack != null)
+        {
+            weaponAttack.SwingWeapon();
+        }
+
+        // 2. 적 사망 및 데미지 처리...
+    }
+
+
 }
