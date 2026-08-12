@@ -1,9 +1,10 @@
+
 using System;
 using UnityEngine;
 
 /// <summary>
 /// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
-/// 🎯 [수정 완료] 앉아있는(IsCrouching) 상태 시 단검 공격 및 투척 차단 기능 추가!
+/// 🎯 [수정 완료] [선택 A] 적용 - 앉아있는 상태에서 적 뒤 접근 시 암살 UI 표시 및 좌클릭 시 일어서며 즉시 백스탭 실행!
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
@@ -102,19 +103,57 @@ public class PlayerCombat : MonoBehaviour
     }
 
     /// <summary>
-    /// 마우스 좌클릭 시 슬롯 상태에 따라 공격 또는 투척 실행
+    /// 🎯 [AssassinateUI 연동용] 현재 카메라 전방의 적이 백스탭(암살) 가능한 위치인지 검사
+    /// </summary>
+    public bool CanAssassinateTarget()
+    {
+        // 단검 슬롯이 아닐 때는 암살 불가
+        if (currentWeapon != WeaponType.Dagger) return false;
+
+        RaycastHit hit;
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange))
+        {
+            EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
+            if (enemyHealth != null && !enemyHealth.IsDead)
+            {
+                Vector3 enemyForward = hit.transform.forward;
+                Vector3 attackDirection = playerCamera.forward;
+
+                float angle = Vector3.Angle(enemyForward, attackDirection);
+                return angle < backstabAngleThreshold; // 백스탭 각도 범위 이내라면 true!
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 마우스 좌클릭 시 슬롯 상태 및 암살 가능 여부에 따라 공격 또는 투척 실행
     /// </summary>
     private void HandleAttack()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            // 🎯 [핵심 추가] 플레이어가 앉아있는(IsCrouching) 상태일 때는 단검 휘두르기 및 투척 모두 불가능!
+            bool canAssassinate = CanAssassinateTarget();
+
+            // 🎯 1. 플레이어가 앉아있는(IsCrouching) 상태일 때 처리
             if (playerController != null && playerController.IsCrouching)
             {
-                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 공격이나 투척을 할 수 없습니다!");
+                // [선택 A] 앉아있어도 암살 대상이 있다면 즉시 일어서면서 암살 발동!
+                if (canAssassinate)
+                {
+                    Debug.Log("🗡️ [PlayerCombat] 앉은 상태에서 암살 개시! 일어서며 백스탭을 실행합니다!");
+                    playerController.ForceStandUp(); // 일어서기!
+                    PerformDaggerAttack();
+                    return;
+                }
+
+                // 암살 대상이 없는 허공이라면 앉은 상태에서의 일반 공격/투척 차단!
+                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 일반 공격이나 투척을 할 수 없습니다! (암살 시에만 자동 일어섬)");
                 return;
             }
 
+            // 🎯 2. 서있는 상태일 때의 일반 공격 또는 투척
             if (currentWeapon == WeaponType.Dagger)
             {
                 if (Time.time >= lastDaggerTime + daggerCooldown)

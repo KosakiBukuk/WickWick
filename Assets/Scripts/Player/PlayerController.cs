@@ -83,16 +83,36 @@ public class PlayerController : MonoBehaviour
 
     private void HandleStateInputs()
     {
-        bool crouchKey = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
-        bool sprintKey = Input.GetKey(KeyCode.LeftShift);
+        // 🎯 1. [토글 방식 적용] C키 또는 LeftControl 키를 '눌렀을 때(GetKeyDown)' 앉기 상태 반전!
+        if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
+        {
+            isCrouching = !isCrouching;
 
-        if (isCrouching) isCrouching = crouchKey;
-        else if (isSprinting) isSprinting = sprintKey;
+            // 앉을 때는 달리기(Sprint) 자동 해제!
+            if (isCrouching)
+            {
+                isSprinting = false;
+            }
+        }
+
+        // 🎯 2. 달리기는 기존처럼 LeftShift 꾹 누르는 동안만 발동 (앉아있을 땐 불가능)
+        if (!isCrouching)
+        {
+            isSprinting = Input.GetKey(KeyCode.LeftShift);
+        }
         else
         {
-            if (crouchKey) isCrouching = true;
-            else if (sprintKey) isSprinting = true;
+            isSprinting = false;
         }
+    }
+
+    /// <summary>
+    /// 🎯 [선택 A 연동] 암살 시 강제로 앉은 자세를 풀고 일어서게 만드는 메서드
+    /// </summary>
+    public void ForceStandUp()
+    {
+        isCrouching = false;
+        Debug.Log("🧍 [PlayerController] 암살 연출로 인해 플레이어가 강제로 일어섰습니다!");
     }
 
     private void HandleMovement()

@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Alerted(발각) 상태 진입 시 360도 전방위 시야 및 사거리 150% 동적 확장 지원 FOV 센서
+/// 🎯 [수정 완료] showFOVMesh 스위치 추가로 인게임 화면 시야각 Mesh 온/오프 지원!
 /// </summary>
 public class FieldOfView : MonoBehaviour
 {
@@ -11,7 +12,9 @@ public class FieldOfView : MonoBehaviour
     [SerializeField] private int meshResolution = 30;          // 메쉬 부드러움 (삼각형 개수)
     [SerializeField] private LayerMask obstacleMask;           // 장애물 레이어
 
-    [Header("🎨 Color Settings")]
+    [Header("🎨 Mesh Visual Settings")]
+    [Tooltip("체크 해제 시 게임 화면에서 바닥 시야각 Mesh를 그리지 않고 숨깁니다.")]
+    [SerializeField] private bool showFOVMesh = false;         // 🎯 [신규] 시야각 메쉬 연출 스위치!
     [SerializeField] private Color baseColor = new Color(1f, 0.92f, 0.016f, 0.25f); // 노랑 (평시)
     [SerializeField] private Color fillColor = new Color(1f, 0.5f, 0f, 0.45f);      // 주황 (의심)
     [SerializeField] private Color alertColor = new Color(1f, 0f, 0f, 0.35f);       // 빨강 (발각)
@@ -130,19 +133,25 @@ public class FieldOfView : MonoBehaviour
     {
         if (enemyAI == null) return;
 
+        // 🎯 [핵심] showFOVMesh가 false이면 Mesh 생성을 건너뛰고 기존 Mesh 삭제!
+        if (!showFOVMesh)
+        {
+            if (baseMeshFilter != null) baseMeshFilter.mesh = null;
+            if (fillMeshFilter != null) fillMeshFilter.mesh = null;
+            return;
+        }
+
         float radius = CurrentViewRadius;
         float angle = CurrentViewAngle;
 
         if (enemyAI.CurrentState == EnemyAI.State.Alerted)
         {
-            // 🔴 Alerted 상태: 1.5배 커진 360도 전방위 빨간색 거대 원형 시야 표시!
             baseMeshRenderer.material.color = alertColor;
             baseMeshFilter.mesh = GenerateFOVMesh(radius, angle);
             fillMeshFilter.mesh = null;
         }
         else
         {
-            // 💛 Patrol / Suspicious 상태: 기존 90도 부채꼴 시야
             float gaugePercent = enemyAI.CurrentDetectionGauge / 100f;
             baseMeshRenderer.material.color = baseColor;
             baseMeshFilter.mesh = GenerateFOVMesh(radius, angle);

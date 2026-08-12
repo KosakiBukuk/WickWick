@@ -115,7 +115,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 401a107451557174883fbf7ef3642c4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThrowableItem
-  noiseRadius: 8
+  noiseRadius: 10
   enemyLayer:
     serializedVersion: 2
     m_Bits: 256

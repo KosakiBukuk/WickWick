@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [최종 완결판] 추격 끊김 해결, 순찰/좌우정찰, 소음 감지, 
+/// [최종 완결판] 추격 끊김 해결, 순찰 지점 대기/좌우정찰, 소음 감지, 
 /// 거리 비례 발각 속도 가속 & 주변 동료 적 비상 전파(Alert Propagation) 통합 AI
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
@@ -18,6 +18,8 @@ public class EnemyAI : MonoBehaviour
     [Header("Patrol Settings")]
     [SerializeField] private Transform[] waypoints;
     [SerializeField] private float patrolSpeed = 2.0f;
+    [Tooltip("🎯 [신규] 웨이포인트 도착 시 멈춰서 정찰 대기하는 시간 (초)")]
+    [SerializeField] private float patrolWaitTime = 2.5f;
 
     [Header("Suspicious Settings")]
     [SerializeField] private float suspiciousSpeed = 2.8f;
@@ -69,6 +71,10 @@ public class EnemyAI : MonoBehaviour
     private bool isFromAlerted = false;
     private float lostSightTimer = 0f;
     private float repathTimer = 0f;
+
+    // 🎯 [순찰 대기 전용 타이머 변수]
+    private bool isPatrolWaiting = false;
+    private float patrolWaitTimer = 0f;
 
     public State CurrentState => currentState;
     public float CurrentDetectionGauge => currentDetectionGauge;
@@ -182,6 +188,10 @@ public class EnemyAI : MonoBehaviour
         StopAllCoroutines();
         agent.isStopped = false;
         isInvestigating = false;
+
+        // 🎯 상태 전환 시 순찰 대기 타이머 초기화
+        isPatrolWaiting = false;
+        patrolWaitTimer = 0f;
 
         switch (currentState)
         {
@@ -305,10 +315,32 @@ public class EnemyAI : MonoBehaviour
         }
 
         // 2개 이상 순찰형 웨이포인트일 때
+        // 🎯 1. 이미 도착해서 정찰 대기 중인 경우
+        if (isPatrolWaiting)
+        {
+            patrolWaitTimer += Time.deltaTime;
+
+            if (patrolWaitTimer >= patrolWaitTime)
+            {
+                isPatrolWaiting = false;
+                patrolWaitTimer = 0f;
+                agent.isStopped = false; // 이동 재개!
+
+                currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
+                agent.SetDestination(waypoints[currentWaypointIndex].position);
+                Debug.Log($"🚶 [{gameObject.name}] 정찰 대기 완료! 다음 웨이포인트({currentWaypointIndex})로 출발합니다.");
+            }
+            return;
+        }
+
+        // 🎯 2. 목표 웨이포인트 도착 감지 시 멈춤 처리!
         if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
         {
-            currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
-            agent.SetDestination(waypoints[currentWaypointIndex].position);
+            isPatrolWaiting = true;
+            patrolWaitTimer = 0f;
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero; // 즉시 멈춤!
+            Debug.Log($"🛑 [{gameObject.name}] 웨이포인트({currentWaypointIndex}) 도착! {patrolWaitTime}초 동안 정찰 대기 시작.");
         }
     }
 
