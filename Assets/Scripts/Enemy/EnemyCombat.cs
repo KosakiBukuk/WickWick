@@ -16,6 +16,9 @@ public class EnemyCombat : MonoBehaviour
     [SerializeField] private float meleeRecoveryTime = 0.35f;  // 자세 복귀 후딜레이 (0.35초)
     [SerializeField] private float meleeCooldown = 1.0f;       // 공격 재사용 쿨타임
 
+    [Header("Enemy Weapon Reference")]
+    [SerializeField] private EnemyWeaponAttack enemyWeaponAttack;
+
     private EnemyAI enemyAI;
     private EnemyHealth enemyHealth;
     private NavMeshAgent agent;
@@ -68,6 +71,12 @@ public class EnemyCombat : MonoBehaviour
 
         Debug.Log($"🗡️ [{gameObject.name}] 단검 공격 시도!");
         yield return new WaitForSeconds(meleeWindUpTime);
+
+        // 🎯 1. 적의 칼 휘두르기 모션 호출!
+        if (enemyWeaponAttack != null)
+        {
+            enemyWeaponAttack.SwingKnife();
+        }
 
         // 실시간 명중 판정 (유격 +0.3m)
         float currentDist = Vector3.Distance(transform.position, playerTransform.position);

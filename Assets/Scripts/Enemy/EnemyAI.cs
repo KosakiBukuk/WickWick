@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 /// <summary>
 /// [최종 완결판] 추격 끊김 해결, 순찰 지점 대기/좌우정찰, 소음 감지, 
-/// 거리 비례 발각 속도 가속 & 주변 동료 적 비상 전파(Alert Propagation) 통합 AI
+/// 거리 비례 발각 속도 가속 & 주변 동료 적 비상 전파 & 게이지 비례 사운드 연동 통합 AI
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(FieldOfView))]
@@ -18,7 +18,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Patrol Settings")]
     [SerializeField] private Transform[] waypoints;
     [SerializeField] private float patrolSpeed = 2.0f;
-    [Tooltip("🎯 [신규] 웨이포인트 도착 시 멈춰서 정찰 대기하는 시간 (초)")]
+    [Tooltip("🎯 웨이포인트 도착 시 멈춰서 정찰 대기하는 시간 (초)")]
     [SerializeField] private float patrolWaitTime = 2.5f;
 
     [Header("Suspicious Settings")]
@@ -28,38 +28,50 @@ public class EnemyAI : MonoBehaviour
     [Header("Chase Settings")]
     [SerializeField] private float chaseSpeed = 4.5f;
     [SerializeField] private float alertMemoryTime = 4.0f; // 시야 이탈 후 수색 전환 대기시간 (4초)
-    [SerializeField] private float repathRate = 0.15f;     // 0.15초마다 경로 재계산 (추격 끊김 방지)
+    [SerializeField] private float repathRate = 0.15f;     // 0.15초마다 경로 재계산
 
     [Header("Detection Gauge Settings")]
     [SerializeField] private float currentDetectionGauge = 0f;
     [SerializeField] private float gaugeDecaySpeed = 20f;
 
-    [Header("🎯 [신규 기능 1] Distance Detection Multiplier Settings")]
-    [Tooltip("발각 게이지 가속 연산용 최대 인식 거리 (이 거리보다 멀어지면 최소 가속율 적용)")]
+    [Header("🎯 Distance Detection Multiplier Settings")]
     [SerializeField] private float maxDetectionDistance = 10.0f;
-
-    [Tooltip("플레이어가 바짝 붙어있을 때 적용할 최대 발각 속도 배수 (예: 3배 빠르게 차오름!)")]
     [SerializeField] private float maxDistanceMultiplier = 1.5f;
-
-    [Tooltip("플레이어가 인식 거리 끝자락에 있을 때 적용할 최소 발각 속도 배수")]
     [SerializeField] private float minDistanceMultiplier = 0.5f;
 
-    [Header("🎯 [신규 기능 2] Alert Propagation Settings (동료 지원 요청)")]
-    [Tooltip("경계(Alerted) 상태 전환 시 주변 동료들에게 비상을 알릴 전파 범위")]
+    [Header("🎯 Alert Propagation Settings")]
     [SerializeField] private float alertPropagationRadius = 12.0f;
-
-    [Tooltip("적 AI 오브젝트가 속한 Layer (Physics.OverlapSphere 검사용)")]
     [SerializeField] private LayerMask enemyLayer;
 
     [Header("Stationary Guard Sweep Settings")]
-    [Tooltip("체크 시 제자리에서 좌우로 고개를 돌리며 정찰합니다. (해제 시 정면 고정)")]
-    [SerializeField] private bool enableSweep = true; // 좌우 정찰 온/오프 스위치!
-
-    [Tooltip("좌우로 회전할 최대 각도 (예: 45도 지정 시 -45도 ~ +45도 회전)")]
+    [SerializeField] private bool enableSweep = true;
     [SerializeField] private float sweepAngle = 45f;
-
-    [Tooltip("고개를 돌리는 회전 속도")]
     [SerializeField] private float sweepSpeed = 1.5f;
+
+    // ========================================================================
+    // 🔊 [🔊 신규 사운드 설정 파트]
+    // ========================================================================
+    [Header("🔊 State Audio Settings")]
+    [Tooltip("사운드가 출력될 AudioSource (비워두면 자동 찾기)")]
+    [SerializeField] private AudioSource audioSource;
+
+    [Space(10)]
+    [Tooltip("의심(Suspicious) 상태 최초 진입 SFX 및 개별 음량")]
+    [SerializeField] private AudioClip suspiciousStartSFX;
+    [Range(0f, 1f)][SerializeField] private float suspiciousStartVolume = 1.0f;
+
+    [Space(5)]
+    [Tooltip("의심 상태 우우웅~ 루프 SFX 및 개별 음량")]
+    [SerializeField] private AudioClip suspiciousLoopSFX;
+    [Range(0f, 1f)][SerializeField] private float suspiciousLoopVolume = 0.7f;
+
+    [Space(5)]
+    [Tooltip("발각(Alerted) 상태 비상 SFX 및 개별 음량")]
+    [SerializeField] private AudioClip alertSFX;
+    [Range(0f, 1f)][SerializeField] private float alertVolume = 1.0f;
+
+    // 루프 전용 별도 AudioSource (단발성 SFX와 루프음이 서로 안 씹히도록 처리!)
+    private AudioSource loopAudioSource;
 
     private NavMeshAgent agent;
     private FieldOfView fov;
@@ -72,7 +84,6 @@ public class EnemyAI : MonoBehaviour
     private float lostSightTimer = 0f;
     private float repathTimer = 0f;
 
-    // 🎯 [순찰 대기 전용 타이머 변수]
     private bool isPatrolWaiting = false;
     private float patrolWaitTimer = 0f;
 
@@ -83,6 +94,14 @@ public class EnemyAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         fov = GetComponent<FieldOfView>();
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        loopAudioSource = gameObject.AddComponent<AudioSource>();
+        loopAudioSource.spatialBlend = 1.0f; // 3D 입체 사운드
+        loopAudioSource.loop = true;
+        loopAudioSource.playOnAwake = false;
     }
 
     private void Start()
@@ -96,11 +115,10 @@ public class EnemyAI : MonoBehaviour
         agent.acceleration = 40f;
         agent.autoBraking = false;
 
-        // 웨이포인트가 1개일 때, 시작하자마자 해당 위치를 바라보도록 초기 회전 세팅
         if (waypoints != null && waypoints.Length == 1 && waypoints[0] != null)
         {
             Vector3 dir = (waypoints[0].position - transform.position).normalized;
-            dir.y = 0; // 평면 보정
+            dir.y = 0;
 
             if (dir != Vector3.zero)
             {
@@ -115,6 +133,7 @@ public class EnemyAI : MonoBehaviour
     {
         UpdateDetectionGauge();
         UpdateBehavior();
+        UpdateSuspiciousLoopAudio(); // 🔊 30% 이상 시 실시간 음량 루프 제어!
     }
 
     private void UpdateDetectionGauge()
@@ -127,20 +146,15 @@ public class EnemyAI : MonoBehaviour
 
             lastKnownPosition = playerTransform.position;
 
-            // 🎯 [거리 비례 차등 발각 게이지 연산]
             float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
-
-            // 거리가 가까울수록 1.0 (바짝 붙음), 멀어질수록 0.0 (끝자락)
             float distanceNormalized = Mathf.Clamp01(1.0f - (distanceToPlayer / maxDetectionDistance));
-
-            // 거리 비율에 따라 최소 배수(0.5x) ~ 최대 배수(3.0x) 보간!
             float distanceMultiplier = Mathf.Lerp(minDistanceMultiplier, maxDistanceMultiplier, distanceNormalized);
 
             float baseDelta = fov.CalculateDetectionDelta();
             currentDetectionGauge = Mathf.Clamp(currentDetectionGauge + (baseDelta * distanceMultiplier), 0f, 100f);
             lostSightTimer = 0f;
         }
-        // 2. 시야 차단 (기둥/벽 뒤로 숨음)
+        // 2. 시야 차단
         else
         {
             if (currentState == State.Alerted)
@@ -152,7 +166,7 @@ public class EnemyAI : MonoBehaviour
                     Debug.Log($"❓ [{gameObject.name}] 4초간 놓침! 기둥 뒤 수색(Suspicious) 전환!");
                     currentDetectionGauge = suspiciousThreshold + 5f;
                     lostSightTimer = 0f;
-                    isFromAlerted = true;
+                    isFromAlerted = true; // 🎯 Alerted 출신 플래그 ON!
                     SetState(State.Suspicious);
                     return;
                 }
@@ -189,7 +203,6 @@ public class EnemyAI : MonoBehaviour
         agent.isStopped = false;
         isInvestigating = false;
 
-        // 🎯 상태 전환 시 순찰 대기 타이머 초기화
         isPatrolWaiting = false;
         patrolWaitTimer = 0f;
 
@@ -199,6 +212,9 @@ public class EnemyAI : MonoBehaviour
                 isFromAlerted = false;
                 agent.speed = patrolSpeed;
                 agent.stoppingDistance = 0.1f;
+
+                StopSuspiciousLoopAudio();
+
                 if (waypoints != null && waypoints.Length > 0)
                 {
                     agent.SetDestination(waypoints[currentWaypointIndex].position);
@@ -208,6 +224,13 @@ public class EnemyAI : MonoBehaviour
             case State.Suspicious:
                 agent.speed = suspiciousSpeed;
                 agent.stoppingDistance = 0.5f;
+
+                // 🎯 [원칙 1] Alerted 이후 다시 돌아올 때는 최초 의심 사운드가 안 나도록 차단! (!isFromAlerted)
+                if (!isFromAlerted && audioSource != null && suspiciousStartSFX != null)
+                {
+                    audioSource.PlayOneShot(suspiciousStartSFX, suspiciousStartVolume);
+                }
+
                 StartCoroutine(SuspiciousRoutine());
                 break;
 
@@ -219,15 +242,62 @@ public class EnemyAI : MonoBehaviour
                 lostSightTimer = 0f;
                 repathTimer = repathRate;
 
-                // 🎯 [핵심] 주변 동료 적들에게 비상 신호 전파!
+                StopSuspiciousLoopAudio();
+
+                if (audioSource != null && alertSFX != null)
+                {
+                    audioSource.PlayOneShot(alertSFX, alertVolume);
+                }
+
                 AlertNearbyEnemies();
                 break;
         }
     }
 
-    /// <summary>
-    /// 🎯 [신규 기능 2] 주변 일정 거리 내의 동료 적들에게 비상 전파!
-    /// </summary>
+    // ========================================================================
+    // 🔊 [🔊 게이지 비례 실시간 볼륨 조절 루프 사운드 제어]
+    // ========================================================================
+    private void UpdateSuspiciousLoopAudio()
+    {
+        if (suspiciousLoopSFX == null || loopAudioSource == null) return;
+
+        // 🎯 [원칙 2] 게이지가 30%(suspiciousThreshold) 이상이고 Suspicious 상태일 때 계속 우우웅~ 소리 출력!
+        if (currentState == State.Suspicious && currentDetectionGauge >= suspiciousThreshold)
+        {
+            // 1. 소리가 재생 중이지 않다면 루프 시작
+            if (!loopAudioSource.isPlaying)
+            {
+                loopAudioSource.clip = suspiciousLoopSFX;
+                loopAudioSource.volume = 0f;
+                loopAudioSource.Play();
+            }
+
+            // 2. 게이지 차오름 수치(30% ~ 100%)에 비례하는 볼륨 실시간 계산!
+            float targetVolume = Mathf.Clamp01(currentDetectionGauge / 100f) * suspiciousLoopVolume;
+
+            // 3. 부드러운 음량 전환
+            loopAudioSource.volume = Mathf.Lerp(loopAudioSource.volume, targetVolume, Time.deltaTime * 8f);
+        }
+        else
+        {
+            // 게이지가 30% 미만으로 떨어지거나 다른 상태가 되면 감쇄 후 정지
+            StopSuspiciousLoopAudio();
+        }
+    }
+
+    private void StopSuspiciousLoopAudio()
+    {
+        if (loopAudioSource != null && loopAudioSource.isPlaying)
+        {
+            loopAudioSource.volume = Mathf.Lerp(loopAudioSource.volume, 0f, Time.deltaTime * 10f);
+
+            if (loopAudioSource.volume <= 0.02f)
+            {
+                loopAudioSource.Stop();
+            }
+        }
+    }
+
     private void AlertNearbyEnemies()
     {
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, alertPropagationRadius, enemyLayer);
@@ -237,15 +307,11 @@ public class EnemyAI : MonoBehaviour
             EnemyAI ally = col.GetComponentInParent<EnemyAI>();
             if (ally != null && ally != this)
             {
-                // 동료 적이 아직 Alerted 상태가 아니라면 즉시 비상 전파 전달!
                 ally.OnAlertedByAlly(lastKnownPosition);
             }
         }
     }
 
-    /// <summary>
-    /// 🎯 동료 적의 비상 라디오 수신 시 호출되는 함수
-    /// </summary>
     public void OnAlertedByAlly(Vector3 targetPos)
     {
         if (currentState == State.Alerted) return;
@@ -275,7 +341,6 @@ public class EnemyAI : MonoBehaviour
     {
         if (waypoints == null || waypoints.Length == 0) return;
 
-        // 1개짜리 제자리 문지기 웨이포인트일 때
         if (waypoints.Length == 1)
         {
             if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
@@ -314,8 +379,6 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 2개 이상 순찰형 웨이포인트일 때
-        // 🎯 1. 이미 도착해서 정찰 대기 중인 경우
         if (isPatrolWaiting)
         {
             patrolWaitTimer += Time.deltaTime;
@@ -324,7 +387,7 @@ public class EnemyAI : MonoBehaviour
             {
                 isPatrolWaiting = false;
                 patrolWaitTimer = 0f;
-                agent.isStopped = false; // 이동 재개!
+                agent.isStopped = false;
 
                 currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
                 agent.SetDestination(waypoints[currentWaypointIndex].position);
@@ -333,13 +396,12 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 🎯 2. 목표 웨이포인트 도착 감지 시 멈춤 처리!
         if (!agent.pathPending && agent.remainingDistance <= (agent.stoppingDistance + 0.3f))
         {
             isPatrolWaiting = true;
             patrolWaitTimer = 0f;
             agent.isStopped = true;
-            agent.velocity = Vector3.zero; // 즉시 멈춤!
+            agent.velocity = Vector3.zero;
             Debug.Log($"🛑 [{gameObject.name}] 웨이포인트({currentWaypointIndex}) 도착! {patrolWaitTime}초 동안 정찰 대기 시작.");
         }
     }
@@ -385,7 +447,7 @@ public class EnemyAI : MonoBehaviour
 
         agent.isStopped = false;
         isInvestigating = false;
-        isFromAlerted = false;
+        isFromAlerted = false; // 수색 종료 후 Patrol 복귀 시 세팅 초기화
 
         currentDetectionGauge = 0f;
         SetState(State.Patrol);
@@ -455,7 +517,6 @@ public class EnemyAI : MonoBehaviour
         Debug.Log($"👂 [{gameObject.name}] 소음을 감지함! 수색 지점: {noisePosition}");
     }
 
-    // 🎯 씬 뷰에서 동료 비상 전파 범위를 눈으로 확인할 수 있는 기즈모
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
