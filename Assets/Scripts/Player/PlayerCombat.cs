@@ -33,6 +33,9 @@ public class PlayerCombat : MonoBehaviour
     [Header("Weapon Motion Reference")]
     [SerializeField] private WeaponAttack weaponAttack;
 
+    [Header("Equipment Manager Reference")]
+    [SerializeField] private PlayerEquipmentManager equipmentManager; // 🎯 참조 추가!
+
     private GameObject currentThrowablePrefab; // 습득한 투척물의 발사용 프리팹
     private bool hasThrowable = false;          // 최대 소지 수량: 1개
     private float lastDaggerTime = -999f;
@@ -81,6 +84,9 @@ public class PlayerCombat : MonoBehaviour
     /// </summary>
     private void HandleWeaponSwitch()
     {
+        // 🎯 [신규 추가] 무기 스위칭 내리기/올리기 연출 중에는 키입력 차단!
+        if (equipmentManager != null && equipmentManager.IsSwitching) return;
+
         if (Input.GetKeyDown(KeyCode.Alpha1) && currentWeapon != WeaponType.Dagger)
         {
             SwitchWeapon(WeaponType.Dagger);
@@ -269,6 +275,8 @@ public class PlayerCombat : MonoBehaviour
         currentThrowablePrefab = null;
         SwitchWeapon(WeaponType.Dagger);
     }
+
+
 
     // PlayerCombat.cs 내부
     private void PerformAssassination(EnemyAI target)

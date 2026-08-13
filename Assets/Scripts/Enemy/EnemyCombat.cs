@@ -3,13 +3,14 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [4단계] 2m 이내 접근 시 단검 베기 공격(선모션 0.25s + 후딜 0.35s) 및 데미지 전달 전담
+/// [최종 완결판] 2m 이내 접근 시 단검 베기 공격(선모션 0.25s + 후딜 0.35s) 및 데미지 전달 전담 모듈
 /// </summary>
 [RequireComponent(typeof(EnemyHealth))]
 [RequireComponent(typeof(EnemyAI))]
 public class EnemyCombat : MonoBehaviour
 {
     [Header("🗡️ Melee Attack Settings")]
+    [Tooltip("Character Controller 밀침을 방지하는 적 공격 사거리 (2m)")]
     [SerializeField] private float meleeAttackRange = 2.0f;    // 공격 사거리 (2m)
     [SerializeField] private float meleeDamage = 25f;          // 단검 데미지
     [SerializeField] private float meleeWindUpTime = 0.25f;    // 칼 치켜올리는 선모션 (0.25초)
@@ -27,6 +28,10 @@ public class EnemyCombat : MonoBehaviour
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
 
+    // 🎯 EnemyAI에서 참조할 프로퍼티 (외부 공개)
+    public float MeleeAttackRange => meleeAttackRange;
+    public bool IsAttacking => isAttacking;
+
     private void Awake()
     {
         enemyAI = GetComponent<EnemyAI>();
@@ -42,7 +47,8 @@ public class EnemyCombat : MonoBehaviour
 
     private void Update()
     {
-        if (enemyHealth.IsDead || playerTransform == null) return;
+        if (enemyHealth != null && enemyHealth.IsDead) return;
+        if (playerTransform == null) return;
 
         // 🎯 Alerted(추격) 상태이고 공격 중이 아닐 때 2m 접근 판단
         if (enemyAI.CurrentState == EnemyAI.State.Alerted && !isAttacking)
@@ -59,7 +65,13 @@ public class EnemyCombat : MonoBehaviour
     private IEnumerator MeleeAttackRoutine()
     {
         isAttacking = true;
-        agent.isStopped = true; // 단검을 내리치는 0.6초 동안만 잠시 정지!
+
+        // 🛑 단검을 내리치는 동안 이동속도 완전 정지!
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
 
         // 순간적으로 플레이어 정면을 부드럽게 바라봄
         Vector3 dirToPlayer = (playerTransform.position - transform.position).normalized;
@@ -99,7 +111,6 @@ public class EnemyCombat : MonoBehaviour
         yield return new WaitForSeconds(meleeRecoveryTime);
 
         lastAttackTime = Time.time;
-        agent.isStopped = false; // 🎯 공격 종료 즉시 이동 풀기! EnemyAI가 추격을 이어받음
-        isAttacking = false;
+        isAttacking = false; // 🎯 공격 종료! EnemyAI가 다시 이동 여부를 판단함
     }
 }
