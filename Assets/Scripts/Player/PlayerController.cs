@@ -59,6 +59,9 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // 🎯 [핵심] 튜토리얼 창이 떠서 시간이 멈춘 상태(Time.timeScale == 0)라면 조작/카메라 회전 통째로 중단!
+        if (Time.timeScale == 0f) return;
+
         HandleMouseLook();
         HandleStateInputs();
         HandleMovement();
