@@ -1,10 +1,9 @@
-
 using System;
 using UnityEngine;
 
 /// <summary>
 /// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
-/// 🎯 [수정 완료] [선택 A] 적용 - 앉아있는 상태에서 적 뒤 접근 시 암살 UI 표시 및 좌클릭 시 일어서며 즉시 백스탭 실행!
+/// 🎯 [암살 보강] 적 Alerted 상태 체크 + 완벽한 등 뒤(시선 & 위치) 조건 엄격 검증!
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
@@ -12,6 +11,7 @@ public class PlayerCombat : MonoBehaviour
 
     [Header("Script References")]
     [SerializeField] private PlayerController playerController;
+    [SerializeField] private PlayerEquipmentManager equipmentManager;
 
     [Header("Weapon Settings")]
     [SerializeField] private WeaponType currentWeapon = WeaponType.Dagger;
@@ -27,17 +27,33 @@ public class PlayerCombat : MonoBehaviour
     [Header("Throwable Settings")]
     [SerializeField] private Transform throwPoint;
     [SerializeField] private float throwForce = 12.0f;
-    [SerializeField] private float throwUpwardForce = 2.5f; // 자연스러운 포물선 투척 힘
+    [SerializeField] private float throwUpwardForce = 2.5f;
     [SerializeField] private float pickupRange = 2.5f;
 
     [Header("Weapon Motion Reference")]
     [SerializeField] private WeaponAttack weaponAttack;
 
-    [Header("Equipment Manager Reference")]
-    [SerializeField] private PlayerEquipmentManager equipmentManager; // 🎯 참조 추가!
+    // ========================================================================
+    // 🔊 [Combat Audio Settings]
+    // ========================================================================
+    [Header("🔊 Combat Audio Settings")]
+    [Tooltip("공격 사운드가 출력될 AudioSource (비워두면 자동 찾기)")]
+    [SerializeField] private AudioSource audioSource;
 
-    private GameObject currentThrowablePrefab; // 습득한 투척물의 발사용 프리팹
-    private bool hasThrowable = false;          // 최대 소지 수량: 1개
+    [Space(5)]
+    [Tooltip("단검 휘두르기(허공 가르기) SFX")]
+    [SerializeField] private AudioClip daggerSwingSFX;
+
+    [Tooltip("적 일반 타격 SFX")]
+    [SerializeField] private AudioClip daggerHitSFX;
+
+    [Tooltip("뒤에서 암살(백스탭) 시 시원하게 터지는 SFX")]
+    [SerializeField] private AudioClip daggerBackstabSFX;
+
+    [Range(0f, 1f)][SerializeField] private float attackAudioVolume = 1.0f;
+
+    private GameObject currentThrowablePrefab;
+    private bool hasThrowable = false;
     private float lastDaggerTime = -999f;
 
     public event Action<WeaponType> OnWeaponChanged;
@@ -50,9 +66,11 @@ public class PlayerCombat : MonoBehaviour
 
     private void Awake()
     {
-        // PlayerController 컴포넌트 자동 캐싱
         if (playerController == null)
             playerController = GetComponent<PlayerController>();
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
     }
 
     private void Start()
@@ -60,7 +78,6 @@ public class PlayerCombat : MonoBehaviour
         if (playerCamera == null)
             playerCamera = Camera.main.transform;
 
-        // ThrowPoint가 없을 경우 카메라 전방에 자동 생성
         if (throwPoint == null && playerCamera != null)
         {
             GameObject autoPoint = new GameObject("AutoThrowPoint");
@@ -79,12 +96,8 @@ public class PlayerCombat : MonoBehaviour
         HandleInteraction();
     }
 
-    /// <summary>
-    /// 1번 키(단검), 2번 키(투척물 - 소지 시에만) 슬롯 교체
-    /// </summary>
     private void HandleWeaponSwitch()
     {
-        // 🎯 [신규 추가] 무기 스위칭 내리기/올리기 연출 중에는 키입력 차단!
         if (equipmentManager != null && equipmentManager.IsSwitching) return;
 
         if (Input.GetKeyDown(KeyCode.Alpha1) && currentWeapon != WeaponType.Dagger)
@@ -112,64 +125,85 @@ public class PlayerCombat : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 [AssassinateUI 연동용] 현재 카메라 전방의 적이 백스탭(암살) 가능한 위치인지 검사
+    /// 🎯 [암살/백스탭 성립 엄격 검증 메서드]
+    /// 1. 적 사망 여부 체크
+    /// 2. 적의 Alerted(경계/발각) 상태 체크 -> Alerted면 암살 불가!
+    /// 3. 적 시선 방향 vs 플레이어 바라보는 방향 비교 (angle < backstabAngleThreshold)
+    /// 4. 적 등 뒤 위치 각도 비교 (positionAngle < 45도) -> 확실한 등 뒤인지 확인
     /// </summary>
+    public bool IsStrictBackstabTarget(EnemyAI enemyAI, EnemyHealth enemyHealth)
+    {
+        if (enemyHealth == null || enemyHealth.IsDead) return false;
+
+        // 🛑 조건 1: 적이 경계/발각(Alerted) 상태라면 암살 불가능!
+        if (enemyAI != null && enemyAI.IsAlerted)
+        {
+            return false;
+        }
+
+        Transform enemyTransform = enemyAI != null ? enemyAI.transform : enemyHealth.transform;
+
+        // 🎯 조건 2: 시선 방향 비교 (적 등 뒤를 바라보고 있는지)
+        Vector3 enemyForward = enemyTransform.forward;
+        Vector3 playerForward = playerCamera.forward;
+        float viewAngle = Vector3.Angle(enemyForward, playerForward);
+
+        // 🎯 조건 3: 실제 플레이어 위치가 적의 Z축 뒤쪽(후방 범위)에 존재하는지 판정
+        Vector3 dirToPlayer = (transform.position - enemyTransform.position).normalized;
+        dirToPlayer.y = 0f; // 수평 위치 비교용
+        Vector3 enemyBack = -enemyForward;
+        enemyBack.y = 0f;
+        float positionAngle = Vector3.Angle(enemyBack, dirToPlayer);
+
+        // 시선 방향 < Threshold(60도) AND 위치 방향 < 45도 조건 동시 만족 필요!
+        bool isStrictlyBehind = (viewAngle < backstabAngleThreshold) && (positionAngle < 45f);
+
+        return isStrictlyBehind;
+    }
+
     public bool CanAssassinateTarget()
     {
-        // 단검 슬롯이 아닐 때는 암살 불가
         if (currentWeapon != WeaponType.Dagger) return false;
 
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange))
         {
+            EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();
             EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
-            if (enemyHealth != null && !enemyHealth.IsDead)
-            {
-                Vector3 enemyForward = hit.transform.forward;
-                Vector3 attackDirection = playerCamera.forward;
 
-                float angle = Vector3.Angle(enemyForward, attackDirection);
-                return angle < backstabAngleThreshold; // 백스탭 각도 범위 이내라면 true!
-            }
+            return IsStrictBackstabTarget(enemyAI, enemyHealth);
         }
 
         return false;
     }
 
-    /// <summary>
-    /// 마우스 좌클릭 시 슬롯 상태 및 암살 가능 여부에 따라 공격 또는 투척 실행
-    /// </summary>
     private void HandleAttack()
     {
         if (Input.GetMouseButtonDown(0))
         {
             bool canAssassinate = CanAssassinateTarget();
 
-            // 🎯 1. 플레이어가 앉아있는(IsCrouching) 상태일 때 처리
             if (playerController != null && playerController.IsCrouching)
             {
-                // [선택 A] 앉아있어도 암살 대상이 있다면 즉시 일어서면서 암살 발동!
                 if (canAssassinate)
                 {
                     Debug.Log("🗡️ [PlayerCombat] 앉은 상태에서 암살 개시! 일어서며 백스탭을 실행합니다!");
-                    playerController.ForceStandUp(); // 일어서기!
-                    weaponAttack.SwingWeapon();
+                    playerController.ForceStandUp();
+                    if (weaponAttack != null) weaponAttack.SwingWeapon();
                     PerformDaggerAttack();
                     return;
                 }
 
-                // 암살 대상이 없는 허공이라면 앉은 상태에서의 일반 공격/투척 차단!
-                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 일반 공격이나 투척을 할 수 없습니다! (암살 시에만 자동 일어섬)");
+                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 일반 공격이나 투척을 할 수 없습니다!");
                 return;
             }
 
-            // 🎯 2. 서있는 상태일 때의 일반 공격 또는 투척
             if (currentWeapon == WeaponType.Dagger)
             {
                 if (Time.time >= lastDaggerTime + daggerCooldown)
                 {
                     PerformDaggerAttack();
-                    weaponAttack.SwingWeapon();
+                    if (weaponAttack != null) weaponAttack.SwingWeapon();
                 }
             }
             else if (currentWeapon == WeaponType.Throwable)
@@ -185,29 +219,44 @@ public class PlayerCombat : MonoBehaviour
         OnAttack?.Invoke();
         Debug.Log("🗡️ 단검 휘두르기!");
 
+        // 🔊 1. 휘두르기 소리 (허공 가르기 SFX)
+        if (audioSource != null && daggerSwingSFX != null)
+        {
+            audioSource.PlayOneShot(daggerSwingSFX, attackAudioVolume);
+        }
+
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange))
         {
-            Vector3 enemyForward = hit.transform.forward;
-            Vector3 attackDirection = playerCamera.forward;
+            EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();
+            EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
 
-            float angle = Vector3.Angle(enemyForward, attackDirection);
-            bool isBackstab = angle < backstabAngleThreshold;
+            // 🎯 강화된 백스탭 조건을 통해 암살/일반 공격 분기
+            bool isBackstab = IsStrictBackstabTarget(enemyAI, enemyHealth);
             float damage = isBackstab ? daggerBackstabDamage : daggerDamage;
 
             Debug.Log($"🗡️ 단검 명중! ({hit.collider.name}) | 백스탭: {isBackstab} | 데미지: {damage}");
 
-            EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
             if (enemyHealth != null && !enemyHealth.IsDead)
             {
                 enemyHealth.TakeDamage(damage);
+
+                // 🔊 2. 적 명중 SFX (백스탭/일반 타격 구분)
+                if (audioSource != null)
+                {
+                    if (isBackstab && daggerBackstabSFX != null)
+                    {
+                        audioSource.PlayOneShot(daggerBackstabSFX, attackAudioVolume);
+                    }
+                    else if (daggerHitSFX != null)
+                    {
+                        audioSource.PlayOneShot(daggerHitSFX, attackAudioVolume);
+                    }
+                }
             }
         }
     }
 
-    /// <summary>
-    /// E키 입력 시 레이캐스트로 IInteractable(벽돌 등) 탐색 및 상호작용
-    /// </summary>
     private void HandleInteraction()
     {
         if (Input.GetKeyDown(KeyCode.E))
@@ -224,9 +273,6 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// IInteractable 오브젝트에서 습득 성공 시 호출
-    /// </summary>
     public bool PickupThrowable(GameObject prefab)
     {
         if (hasThrowable)
@@ -239,15 +285,11 @@ public class PlayerCombat : MonoBehaviour
         currentThrowablePrefab = prefab;
         OnThrowableStateChanged?.Invoke(true);
 
-        // 습득 시 편의성을 위해 즉시 투척물 슬롯으로 전환!
         SwitchWeapon(WeaponType.Throwable);
         Debug.Log($"📦 [상호작용] {prefab.name} 획득 완료! (2번 슬롯 장착됨)");
         return true;
     }
 
-    /// <summary>
-    /// 투척물 발사 후 소지 해제 및 단검 슬롯 원복
-    /// </summary>
     private void ThrowObject()
     {
         if (currentThrowablePrefab == null || throwPoint == null || !hasThrowable) return;
@@ -256,7 +298,6 @@ public class PlayerCombat : MonoBehaviour
         OnThrowableStateChanged?.Invoke(false);
         OnThrow?.Invoke();
 
-        // 물리 투척물 인스턴스화
         GameObject thrownObj = Instantiate(currentThrowablePrefab, throwPoint.position, throwPoint.rotation);
 
         Rigidbody rb = thrownObj.GetComponent<Rigidbody>();
@@ -265,30 +306,12 @@ public class PlayerCombat : MonoBehaviour
             rb = thrownObj.AddComponent<Rigidbody>();
         }
 
-        // 전방 힘 + 상향 포물선 힘 가하기
         Vector3 throwDirection = playerCamera.forward * throwForce + Vector3.up * throwUpwardForce;
         rb.AddForce(throwDirection, ForceMode.Impulse);
 
         Debug.Log($"💥 {currentThrowablePrefab.name} 투척 완료!");
 
-        // 사용 후 데이터 비우고 기본 단검 슬롯으로 자동 복귀
         currentThrowablePrefab = null;
         SwitchWeapon(WeaponType.Dagger);
     }
-
-
-
-    // PlayerCombat.cs 내부
-    private void PerformAssassination(EnemyAI target)
-    {
-        // 🎯 1. 칼 휘두르기 모션 호출!
-        if (weaponAttack != null)
-        {
-            weaponAttack.SwingWeapon();
-        }
-
-        // 2. 적 사망 및 데미지 처리...
-    }
-
-
 }

@@ -610,11 +610,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b9664c1c6aca2944adc4c519b2d3774, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombat
-  meleeAttackRange: 2
+  meleeAttackRange: 2.3
   meleeDamage: 25
   meleeWindUpTime: 0.25
   meleeRecoveryTime: 0.35
-  meleeCooldown: 1.8
+  meleeCooldown: 1.5
   enemyWeaponAttack: {fileID: 8378936513241674945}
 --- !u!114 &2157371167489700143
 MonoBehaviour:

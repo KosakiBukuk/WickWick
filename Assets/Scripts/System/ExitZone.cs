@@ -5,6 +5,7 @@ using Unity.Cinemachine; // 🎯 유니티 6 시네머신 v3 네임스페이스
 
 /// <summary>
 /// 🎯 [스플라인 컷씬, WayPoint 자동 이동, 적 일시정지 & 결과 UI 전환 모듈]
+/// 탈출 성공 시 인게임 HUD 및 무기 VisualMesh를 숨겨 깔끔한 연출을 제공합니다.
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class ExitZone : MonoBehaviour
@@ -28,8 +29,13 @@ public class ExitZone : MonoBehaviour
     [Header("Player References (조작 잠금 및 이동용)")]
     [SerializeField] private MonoBehaviour playerController;
     [SerializeField] private MonoBehaviour playerCombat;
+    [Tooltip("🎯 탈출 연출 시 숨길 플레이어 손/무기 VisualMesh")]
+    [SerializeField] private GameObject playerWeaponMesh;
 
     [Header("UI References")]
+    [Tooltip("🎯 HP 텍스트, 무기 아이콘 등이 포함된 메인 인게임 HUD Canvas")]
+    [SerializeField] private GameObject inGameHUDCanvas;
+
     [Tooltip("STAGE CLEAR 문구와 [다음] 버튼이 있는 1단계 배너 UI")]
     [SerializeField] private GameObject stageClearBannerUI;
 
@@ -39,6 +45,10 @@ public class ExitZone : MonoBehaviour
     [Header("Player Health Settings (점수 연산용)")]
     [SerializeField] private float playerCurrentHP = 100f;
     [SerializeField] private float playerMaxHP = 100f;
+
+    [Header("Clear Visual Options")]
+    [Tooltip("체크 시 탈출 후 씬의 모든 적 오브젝트를 화면에서 숨깁니다.")]
+    [SerializeField] private bool hideEnemiesOnClear = true;
 
     private bool isCleared = false;
 
@@ -56,27 +66,50 @@ public class ExitZone : MonoBehaviour
         if (isCleared || !other.CompareTag("Player")) return;
 
         isCleared = true;
-        Debug.Log("🎉 [ExitZone] 탈출 연출 시작! 적 정지 및 플레이어 Waypoint 이동 시작!");
+        Debug.Log("🎉 [ExitZone] 탈출 연출 시작! 화면 청소 및 컷씬을 진행합니다.");
 
-        // 1. 플레이어 기존 조작 비활성화
+        // 1. 🧹 화면 UI 및 플레이어 무기 숨기기 (청소 로직!)
+        CleanUpInGameVisuals();
+
+        // 2. 플레이어 기존 조작 비활성화
         if (playerController != null) playerController.enabled = false;
         if (playerCombat != null) playerCombat.enabled = false;
 
-        // 2. 씬 내의 모든 적 AI 및 NavMeshAgent 일시정지!
+        // 3. 씬 내의 모든 적 AI 및 NavMeshAgent 일시정지!
         FreezeAllEnemies();
 
-        // 3. 탈출 카메라 활성화
+        // 4. 탈출 카메라 활성화
         if (exitCamera != null)
         {
             exitCamera.gameObject.SetActive(true);
         }
 
-        // 4. 마우스 커서 해제
+        // 5. 마우스 커서 해제
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 5. 스플라인 컷씬 & Waypoint 자동 이동 시작!
+        // 6. 스플라인 컷씬 & Waypoint 자동 이동 시작!
         StartCoroutine(PlayExitCutsceneRoutine());
+    }
+
+    /// <summary>
+    /// 🎯 탈출 연출 진입 시 인게임 HUD 및 들고 있던 무기를 비활성화
+    /// </summary>
+    private void CleanUpInGameVisuals()
+    {
+        // 인게임 HUD Canvas 꺼버리기
+        if (inGameHUDCanvas != null)
+        {
+            inGameHUDCanvas.SetActive(false);
+            Debug.Log("🧹 [ExitZone] InGameHUDCanvas 비활성화 완료!");
+        }
+
+        // 플레이어 들고 있던 칼/무기 VisualMesh 숨기기
+        if (playerWeaponMesh != null)
+        {
+            playerWeaponMesh.SetActive(false);
+            Debug.Log("🧹 [ExitZone] PlayerWeaponMesh 비활성화 완료!");
+        }
     }
 
     /// <summary>
@@ -95,8 +128,14 @@ public class ExitZone : MonoBehaviour
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
             }
+
+            // 옵션: 적 오브젝트를 아예 숨기고 싶을 경우
+            if (hideEnemiesOnClear)
+            {
+                enemy.gameObject.SetActive(false);
+            }
         }
-        Debug.Log($"🛑 [ExitZone] 총 {enemies.Length}명의 적을 완전 정지시켰습니다.");
+        Debug.Log($"🛑 [ExitZone] 총 {enemies.Length}명의 적을 제어/숨김 처리했습니다.");
     }
 
     /// <summary>

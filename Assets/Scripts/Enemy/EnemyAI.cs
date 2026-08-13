@@ -73,7 +73,6 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private AudioClip alertSFX;
     [Range(0f, 1f)][SerializeField] private float alertVolume = 1.0f;
 
-    // 루프 전용 별도 AudioSource (단발성 SFX와 루프음이 서로 안 씹히도록 처리!)
     private AudioSource loopAudioSource;
 
     private NavMeshAgent agent;
@@ -90,7 +89,9 @@ public class EnemyAI : MonoBehaviour
     private bool isPatrolWaiting = false;
     private float patrolWaitTimer = 0f;
 
+    // 🎯 외부 참조용 프로퍼티들
     public State CurrentState => currentState;
+    public bool IsAlerted => currentState == State.Alerted; // 👈 🎯 [신규 추가] CS1061 에러 완벽 해결!
     public float CurrentDetectionGauge => currentDetectionGauge;
 
     private void Awake()
@@ -167,7 +168,6 @@ public class EnemyAI : MonoBehaviour
 
                 if (lostSightTimer >= alertMemoryTime)
                 {
-                    
                     currentDetectionGauge = suspiciousThreshold + 5f;
                     lostSightTimer = 0f;
                     isFromAlerted = true;
@@ -200,7 +200,6 @@ public class EnemyAI : MonoBehaviour
     private void SetState(State newState)
     {
         currentState = newState;
-        
 
         StopAllCoroutines();
         agent.isStopped = false;
@@ -240,7 +239,6 @@ public class EnemyAI : MonoBehaviour
                 isFromAlerted = false;
                 agent.speed = chaseSpeed;
 
-                // 🎯 EnemyCombat의 공격 사거리에 맞춰 Stopping Distance 자동 세팅!
                 if (enemyCombat != null)
                 {
                     agent.stoppingDistance = enemyCombat.MeleeAttackRange * 0.8f;
@@ -330,7 +328,7 @@ public class EnemyAI : MonoBehaviour
 
         lastKnownPosition = targetPos;
         currentDetectionGauge = 100f;
-        
+
         SetState(State.Alerted);
     }
 
@@ -403,7 +401,6 @@ public class EnemyAI : MonoBehaviour
 
                 currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
                 agent.SetDestination(waypoints[currentWaypointIndex].position);
-                
             }
             return;
         }
@@ -414,7 +411,6 @@ public class EnemyAI : MonoBehaviour
             patrolWaitTimer = 0f;
             agent.isStopped = true;
             agent.velocity = Vector3.zero;
-            
         }
     }
 
@@ -444,7 +440,6 @@ public class EnemyAI : MonoBehaviour
         }
 
         agent.isStopped = true;
-        
 
         Quaternion baseRot = transform.rotation;
 
@@ -478,7 +473,6 @@ public class EnemyAI : MonoBehaviour
         transform.rotation = targetRot;
     }
 
-    // 🎯 [핵심 정돈] Character Controller 밀침 방지 및 깔끔한 추격 연동!
     private void UpdateChase()
     {
         if (playerTransform == null) return;
@@ -487,13 +481,11 @@ public class EnemyAI : MonoBehaviour
         float attackRange = (enemyCombat != null) ? enemyCombat.MeleeAttackRange : 2.0f;
         bool isCombatAttacking = (enemyCombat != null && enemyCombat.IsAttacking);
 
-        // 🎯 1. 사거리 이내 진입했거나 이미 공격 진행 중인 경우 -> 이동 멈춤 & 플레이어 주시
         if (distToPlayer <= attackRange || isCombatAttacking)
         {
             agent.isStopped = true;
             agent.velocity = Vector3.zero;
 
-            // 플레이어를 향해 부드럽게 고개/몸통 회전
             Vector3 lookDir = (playerTransform.position - transform.position).normalized;
             lookDir.y = 0;
             if (lookDir != Vector3.zero)
@@ -501,7 +493,6 @@ public class EnemyAI : MonoBehaviour
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
             }
         }
-        // 🎯 2. 사거리 밖이고 공격 중도 아닐 때 -> 추격 경로 업데이트
         else
         {
             agent.isStopped = false;
@@ -550,8 +541,6 @@ public class EnemyAI : MonoBehaviour
             agent.speed = patrolSpeed * 1.2f;
             agent.SetDestination(noisePosition);
         }
-
-       
     }
 
     private void OnDrawGizmosSelected()
