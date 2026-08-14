@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
-/// 🎯 [암살 보강] 적 Alerted 상태 체크 + 완벽한 등 뒤(시선 & 위치) 조건 엄격 검증!
+/// 🎯 [상호작용 보강] 조준 대상 실시간 감지 & E키 습득 UI 팝업 이벤트 지원!
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
@@ -33,33 +33,27 @@ public class PlayerCombat : MonoBehaviour
     [Header("Weapon Motion Reference")]
     [SerializeField] private WeaponAttack weaponAttack;
 
-    // ========================================================================
-    // 🔊 [Combat Audio Settings]
-    // ========================================================================
     [Header("🔊 Combat Audio Settings")]
-    [Tooltip("공격 사운드가 출력될 AudioSource (비워두면 자동 찾기)")]
     [SerializeField] private AudioSource audioSource;
-
-    [Space(5)]
-    [Tooltip("단검 휘두르기(허공 가르기) SFX")]
     [SerializeField] private AudioClip daggerSwingSFX;
-
-    [Tooltip("적 일반 타격 SFX")]
     [SerializeField] private AudioClip daggerHitSFX;
-
-    [Tooltip("뒤에서 암살(백스탭) 시 시원하게 터지는 SFX")]
     [SerializeField] private AudioClip daggerBackstabSFX;
-
     [Range(0f, 1f)][SerializeField] private float attackAudioVolume = 1.0f;
 
     private GameObject currentThrowablePrefab;
     private bool hasThrowable = false;
     private float lastDaggerTime = -999f;
 
+    // 🎯 [신규] 현재 바라보고 있는 상호작용 대상 캐싱
+    private IInteractable currentHoveredInteractable = null;
+
     public event Action<WeaponType> OnWeaponChanged;
     public event Action OnAttack;
     public event Action OnThrow;
     public event Action<bool> OnThrowableStateChanged;
+
+    // 🎯 [신규] UI 연동용 이벤트 (상호작용 가능 여부, 표시할 안내 텍스트)
+    public event Action<bool, string> OnInteractableHovered;
 
     public bool HasThrowable => hasThrowable;
     public WeaponType CurrentWeapon => currentWeapon;
@@ -93,7 +87,7 @@ public class PlayerCombat : MonoBehaviour
     {
         HandleWeaponSwitch();
         HandleAttack();
-        HandleInteraction();
+        HandleInteractionDetection(); // 🎯 매 프레임 감지 & E키 입력 처리
     }
 
     private void HandleWeaponSwitch()
@@ -124,18 +118,10 @@ public class PlayerCombat : MonoBehaviour
         Debug.Log($"🔄 [무기 교체] 현재 슬롯: {currentWeapon}");
     }
 
-    /// <summary>
-    /// 🎯 [암살/백스탭 성립 엄격 검증 메서드]
-    /// 1. 적 사망 여부 체크
-    /// 2. 적의 Alerted(경계/발각) 상태 체크 -> Alerted면 암살 불가!
-    /// 3. 적 시선 방향 vs 플레이어 바라보는 방향 비교 (angle < backstabAngleThreshold)
-    /// 4. 적 등 뒤 위치 각도 비교 (positionAngle < 45도) -> 확실한 등 뒤인지 확인
-    /// </summary>
     public bool IsStrictBackstabTarget(EnemyAI enemyAI, EnemyHealth enemyHealth)
     {
         if (enemyHealth == null || enemyHealth.IsDead) return false;
 
-        // 🛑 조건 1: 적이 경계/발각(Alerted) 상태라면 암살 불가능!
         if (enemyAI != null && enemyAI.IsAlerted)
         {
             return false;
@@ -143,21 +129,17 @@ public class PlayerCombat : MonoBehaviour
 
         Transform enemyTransform = enemyAI != null ? enemyAI.transform : enemyHealth.transform;
 
-        // 🎯 조건 2: 시선 방향 비교 (적 등 뒤를 바라보고 있는지)
         Vector3 enemyForward = enemyTransform.forward;
         Vector3 playerForward = playerCamera.forward;
         float viewAngle = Vector3.Angle(enemyForward, playerForward);
 
-        // 🎯 조건 3: 실제 플레이어 위치가 적의 Z축 뒤쪽(후방 범위)에 존재하는지 판정
         Vector3 dirToPlayer = (transform.position - enemyTransform.position).normalized;
-        dirToPlayer.y = 0f; // 수평 위치 비교용
+        dirToPlayer.y = 0f;
         Vector3 enemyBack = -enemyForward;
         enemyBack.y = 0f;
         float positionAngle = Vector3.Angle(enemyBack, dirToPlayer);
 
-        // 시선 방향 < Threshold(60도) AND 위치 방향 < 45도 조건 동시 만족 필요!
         bool isStrictlyBehind = (viewAngle < backstabAngleThreshold) && (positionAngle < 45f);
-
         return isStrictlyBehind;
     }
 
@@ -219,7 +201,6 @@ public class PlayerCombat : MonoBehaviour
         OnAttack?.Invoke();
         Debug.Log("🗡️ 단검 휘두르기!");
 
-        // 🔊 1. 휘두르기 소리 (허공 가르기 SFX)
         if (audioSource != null && daggerSwingSFX != null)
         {
             audioSource.PlayOneShot(daggerSwingSFX, attackAudioVolume);
@@ -231,7 +212,6 @@ public class PlayerCombat : MonoBehaviour
             EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();
             EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
 
-            // 🎯 강화된 백스탭 조건을 통해 암살/일반 공격 분기
             bool isBackstab = IsStrictBackstabTarget(enemyAI, enemyHealth);
             float damage = isBackstab ? daggerBackstabDamage : daggerDamage;
 
@@ -241,7 +221,6 @@ public class PlayerCombat : MonoBehaviour
             {
                 enemyHealth.TakeDamage(damage);
 
-                // 🔊 2. 적 명중 SFX (백스탭/일반 타격 구분)
                 if (audioSource != null)
                 {
                     if (isBackstab && daggerBackstabSFX != null)
@@ -257,19 +236,44 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    private void HandleInteraction()
+    /// <summary>
+    /// 🎯 [실시간 상호작용 감지 및 E키 입력 처리]
+    /// </summary>
+    private void HandleInteractionDetection()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        RaycastHit hit;
+        IInteractable interactable = null;
+
+        // 1. 카메라 정면 레이캐스트
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, pickupRange))
         {
-            RaycastHit hit;
-            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, pickupRange))
+            interactable = hit.collider.GetComponent<IInteractable>();
+        }
+
+        // 2. 조준 대상 변경 감지 & UI 텍스트 전송
+        if (interactable != currentHoveredInteractable)
+        {
+            currentHoveredInteractable = interactable;
+
+            if (currentHoveredInteractable != null)
             {
-                IInteractable interactable = hit.collider.GetComponent<IInteractable>();
-                if (interactable != null)
-                {
-                    interactable.Interact(gameObject);
-                }
+                // 🎯 [수정] NEMESYS 폰트 스타일에 맞춘 깔끔한 영문 대문자 문구!
+                string promptText = hasThrowable ? "SLOT FULL (1/1)" : "PRESS [E] TO PICK UP";
+                OnInteractableHovered?.Invoke(true, promptText);
             }
+            else
+            {
+                OnInteractableHovered?.Invoke(false, string.Empty);
+            }
+        }
+
+        // 3. E키 입력 시 상호작용 실행
+        if (Input.GetKeyDown(KeyCode.E) && currentHoveredInteractable != null)
+        {
+            currentHoveredInteractable.Interact(gameObject);
+
+            currentHoveredInteractable = null;
+            OnInteractableHovered?.Invoke(false, string.Empty);
         }
     }
 

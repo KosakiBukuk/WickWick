@@ -580,9 +580,9 @@ MonoBehaviour:
   repathRate: 0.15
   currentDetectionGauge: 0
   gaugeDecaySpeed: 35
-  maxDetectionDistance: 9
-  maxDistanceMultiplier: 1.3
-  minDistanceMultiplier: 0.8
+  maxDetectionDistance: 10
+  maxDistanceMultiplier: 1.5
+  minDistanceMultiplier: 1
   alertPropagationRadius: 15
   enemyLayer:
     serializedVersion: 2
@@ -614,7 +614,7 @@ MonoBehaviour:
   meleeDamage: 25
   meleeWindUpTime: 0.25
   meleeRecoveryTime: 0.35
-  meleeCooldown: 1.5
+  meleeCooldown: 1.3
   enemyWeaponAttack: {fileID: 8378936513241674945}
 --- !u!114 &2157371167489700143
 MonoBehaviour:

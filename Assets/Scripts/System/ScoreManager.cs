@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [점수 집계 & 랭크 산출 시스템 - 처치 보너스(Kill Bonus) 적용판]
-/// 클리어 타임(5분 기준), 감지 횟수 차감, 처치 보너스 가산, 잔여 체력 보너스 종합 연산
+/// 🎯 [점수 집계 & 랭크 산출 & 최고 기록 저장 시스템 - 고스트 어쌔신 특화 밸런스판]
+/// 무발각 상태에서의 적 은신 처치(Kill)에 가장 높은 가중치를 부여합니다.
 /// </summary>
 public class ScoreManager : MonoBehaviour
 {
@@ -15,34 +15,34 @@ public class ScoreManager : MonoBehaviour
     [SerializeField] private float baseScore = 10000f;
 
     [Header("Clear Time Settings")]
-    [Tooltip("목표 기준 클리어 타임 (초 단위, 예: 300초 = 5분)")]
+    [Tooltip("목표 기준 클리어 타임 (초 단위, 기본: 300초 = 5분)")]
     [SerializeField] private float targetTime = 300f;
 
-    [Tooltip("목표 시간보다 빠르게 클리어 시 초당 보너스 점수")]
-    [SerializeField] private float timeBonusPerSec = 20f;
+    [Tooltip("목표 시간보다 빠를 때 초당 보너스 점수 (킬 보너스에 집중하도록 10점으로 완화)")]
+    [SerializeField] private float timeBonusPerSec = 10f;
 
     [Tooltip("목표 시간 초과 시 초당 감점 점수")]
     [SerializeField] private float timePenaltyPerSec = 15f;
 
-    [Tooltip("시간 초과로 인한 최대 감점 한도")]
+    [Tooltip("시간 초과 최대 감점 한도")]
     [SerializeField] private float maxTimePenalty = 2000f;
 
     [Header("Detection Settings")]
-    [Tooltip("적에게 발각(Alerted)될 때마다 차감되는 감점 점수")]
-    [SerializeField] private float detectionPenalty = 1500f;
+    [Tooltip("적에게 발각(Alerted)될 때마다 차감되는 감점 (난투 방지용 2,500점)")]
+    [SerializeField] private float detectionPenalty = 2500f;
 
     [Header("Kill Bonus Settings")]
-    [Tooltip("🎯 적 1명 처치 시 획득하는 보너스 점수! (위험을 무릅쓴 제압 보상)")]
-    [SerializeField] private float killBonus = 500f;
+    [Tooltip("🎯 적 1명 처치 시 획득하는 대량 보너스 점수! (무발각 암살 최고 가중치)")]
+    [SerializeField] private float killBonus = 1500f;
 
     [Header("Health Bonus Settings")]
-    [Tooltip("체력이 100% 보존되었을 때 받을 수 있는 최대 체력 보너스")]
+    [Tooltip("체력이 100% 보존되었을 때 최대 보너스")]
     [SerializeField] private float maxHealthBonus = 2000f;
 
-    [Header("Rank Thresholds")]
-    [SerializeField] private float sRankThreshold = 12000f;
-    [SerializeField] private float aRankThreshold = 9000f;
-    [SerializeField] private float bRankThreshold = 6000f;
+    [Header("Rank Thresholds (개편된 랭크 컷)")]
+    [SerializeField] private float sRankThreshold = 18000f; // 무발각 다처치 시 달성 가능!
+    [SerializeField] private float aRankThreshold = 13000f; // 무처치 스피드런 달성 가능
+    [SerializeField] private float bRankThreshold = 8000f;
 
     // 실시간 기록 변수
     private float elapsedTime = 0f;
@@ -54,13 +54,17 @@ public class ScoreManager : MonoBehaviour
     public float ElapsedTime => elapsedTime;
     public int DetectionCount => detectionCount;
     public int KillCount => killCount;
+    public bool IsTimerRunning => isTimerRunning;
+
+    private const string HIGH_SCORE_KEY = "STEALTH_HIGH_SCORE";
+    private const string BEST_TIME_KEY = "STEALTH_BEST_TIME";
+    private const string BEST_RANK_KEY = "STEALTH_BEST_RANK";
 
     private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
         }
         else
         {
@@ -70,7 +74,9 @@ public class ScoreManager : MonoBehaviour
 
     private void Start()
     {
-        StartScoreTracking();
+        // Zone 1 진입 전까지는 대기
+        isTimerRunning = false;
+        elapsedTime = 0f;
     }
 
     private void Update()
@@ -81,44 +87,32 @@ public class ScoreManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 게임 시작 시 타이머 및 기록 리셋
-    /// </summary>
     public void StartScoreTracking()
     {
         elapsedTime = 0f;
         detectionCount = 0;
         killCount = 0;
         isTimerRunning = true;
-        Debug.Log("⏱️ [ScoreManager] 점수 측정 시작!");
+        Debug.Log("⏱️ [ScoreManager] Zone 1 진입 감지 -> 점수 및 시간 측정 시작!");
     }
 
-    /// <summary>
-    /// 적에게 발각(Alerted)되었을 때 호출
-    /// </summary>
     public void AddDetection()
     {
         detectionCount++;
         Debug.Log($"🚨 [ScoreManager] 감지 횟수 증가! 현재 감지: {detectionCount}회");
     }
 
-    /// <summary>
-    /// 적을 처치했을 때 호출
-    /// </summary>
     public void AddKill()
     {
         killCount++;
-        Debug.Log($"⚔️ [ScoreManager] 적 제압 성공! 보너스 누적 (현재 처치: {killCount}명)");
+        Debug.Log($"⚔️ [ScoreManager] 적 제압 성공! (+{killBonus}점 누적 | 현재 처치: {killCount}명)");
     }
 
-    /// <summary>
-    /// 탈출 성공 시 최종 점수 및 랭크 산출
-    /// </summary>
     public ScoreResult CalculateFinalScore(float currentHP, float maxHP)
     {
         isTimerRunning = false;
 
-        // 1. 타임 점수 연산 (5분 기준)
+        // 1. 타임 점수 연산
         float timeScore = 0f;
         if (elapsedTime <= targetTime)
         {
@@ -130,17 +124,17 @@ public class ScoreManager : MonoBehaviour
             timeScore = -Mathf.Min(overTimePenalty, maxTimePenalty);
         }
 
-        // 2. 감지 감점 연산
+        // 2. 감지 감점
         float totalDetectionPenalty = detectionCount * detectionPenalty;
 
-        // 3. 🎯 [수정 완료] 처치 보너스 연산! (처치한 수만큼 점수 추가 가산)
+        // 3. 처치 보너스 (대량 가산!)
         float totalKillBonus = killCount * killBonus;
 
-        // 4. 잔여 체력 보너스 연산
+        // 4. 잔여 체력 보너스
         float hpRatio = Mathf.Clamp01(currentHP / maxHP);
         float healthBonus = hpRatio * maxHealthBonus;
 
-        // 5. 최종 총점 계산 (+ totalKillBonus 가산!)
+        // 5. 최종 총점 계산
         float totalScore = Mathf.Max(0f, baseScore + timeScore - totalDetectionPenalty + totalKillBonus + healthBonus);
 
         // 6. 랭크 판정
@@ -149,9 +143,24 @@ public class ScoreManager : MonoBehaviour
         else if (totalScore >= aRankThreshold) finalRank = Rank.A;
         else if (totalScore >= bRankThreshold) finalRank = Rank.B;
 
+        int finalScoreInt = Mathf.RoundToInt(totalScore);
+
+        // 7. 최고 기록(DB) 갱신 및 저장
+        int previousHighScore = PlayerPrefs.GetInt(HIGH_SCORE_KEY, 0);
+        bool isNewRecord = finalScoreInt > previousHighScore;
+
+        if (isNewRecord)
+        {
+            PlayerPrefs.SetInt(HIGH_SCORE_KEY, finalScoreInt);
+            PlayerPrefs.SetFloat(BEST_TIME_KEY, elapsedTime);
+            PlayerPrefs.SetString(BEST_RANK_KEY, finalRank.ToString());
+            PlayerPrefs.Save();
+            Debug.Log($"🎉 [ScoreManager] 신기록 갱신! 최고 점수: {finalScoreInt}점 (Rank {finalRank})");
+        }
+
         ScoreResult result = new ScoreResult
         {
-            finalScore = Mathf.RoundToInt(totalScore),
+            finalScore = finalScoreInt,
             rank = finalRank,
             clearTime = elapsedTime,
             detectionCount = detectionCount,
@@ -159,26 +168,35 @@ public class ScoreManager : MonoBehaviour
             timeBonusOrPenalty = Mathf.RoundToInt(timeScore),
             detectionPenalty = Mathf.RoundToInt(totalDetectionPenalty),
             killBonus = Mathf.RoundToInt(totalKillBonus),
-            healthBonus = Mathf.RoundToInt(healthBonus)
+            healthBonus = Mathf.RoundToInt(healthBonus),
+            isNewRecord = isNewRecord,
+            highScore = Mathf.Max(previousHighScore, finalScoreInt)
         };
 
-        Debug.Log($"🏆 [ScoreManager] 최종 점수: {result.finalScore} | 랭크: {result.rank}");
         return result;
     }
-}
 
-/// <summary>
-/// UI 연동용 결과 데이터 구조체
-/// </summary>
-public struct ScoreResult
-{
-    public int finalScore;
-    public ScoreManager.Rank rank;
-    public float clearTime;
-    public int detectionCount;
-    public int killCount;
-    public int timeBonusOrPenalty;
-    public int detectionPenalty;
-    public int killBonus; // 🎯 killPenalty 대신 killBonus 로 변경!
-    public int healthBonus;
+    public int GetSavedHighScore() => PlayerPrefs.GetInt(HIGH_SCORE_KEY, 0);
+    public float GetSavedBestTime() => PlayerPrefs.GetFloat(BEST_TIME_KEY, 0f);
+    public string GetSavedBestRank() => PlayerPrefs.GetString(BEST_RANK_KEY, "None");
+
+    /// <summary>
+    /// 🎯 [UI 및 결과 연동용 데이터 구조체]
+    /// </summary>
+    public struct ScoreResult
+    {
+        public int finalScore;
+        public ScoreManager.Rank rank;
+        public float clearTime;
+        public int detectionCount;
+        public int killCount;
+        public int timeBonusOrPenalty;
+        public int detectionPenalty;
+        public int killBonus;
+        public int healthBonus;
+
+        // 🌟 [이 2줄이 추가되어야 빨간 줄이 사라져요!]
+        public bool isNewRecord; // 🎯 신기록 달성 여부 (True/False)
+        public int highScore;    // 🎯 역대 최고 점수
+    }
 }

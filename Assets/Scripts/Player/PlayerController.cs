@@ -29,6 +29,10 @@ public class PlayerController : MonoBehaviour
     [Header("Visual Mesh (Optional)")]
     [SerializeField] private Transform visualMesh;
 
+    [Header("Zone Settings")]
+    [Tooltip("현재 플레이어가 위치한 구역 (0 = Zone 0 튜토리얼, 1 = Zone 1...)")]
+    [SerializeField] private int currentZone = 0;
+
     private CharacterController controller;
     private Vector3 velocity;
     private float xRotation = 0f;
@@ -38,6 +42,9 @@ public class PlayerController : MonoBehaviour
 
     public bool IsCrouching => isCrouching;
     public bool IsSprinting => isSprinting;
+
+    //외부에서 현재 구역을 읽을 수 있게해주는 변수
+    public int CurrentZone => currentZone;
 
     private void Awake()
     {
@@ -170,5 +177,14 @@ public class PlayerController : MonoBehaviour
             visualMesh.localScale = new Vector3(1f, meshScaleY, 1f);
             visualMesh.localPosition = new Vector3(0f, controller.height / 2f, 0f);
         }
+    }
+
+    /// <summary>
+    /// 🎯 구역 전환 트리거를 밟았을 때 호출될 함수
+    /// </summary>
+    public void SetCurrentZone(int newZone)
+    {
+        currentZone = newZone;
+        Debug.Log($"📍 [Player] 플레이어 구역 변경 완료 ➔ Zone {currentZone}");
     }
 }
