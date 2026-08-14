@@ -1,8 +1,9 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [오브젝트 활성화 방식 튜토리얼 UI 매니저]
-/// 지정된 튜토리얼 UI 패널 오브젝트를 켜고 시간을 정지하며, C키로 닫고 재개합니다.
+/// 🎯 [튜토리얼 UI 매니저 - 입력 씹힘/중복 방지 완결판]
+/// C키로 닫을 때 1프레임 딜레이를 주어 플레이어가 같은 프레임에 앉아버리는 현상을 원천 차단합니다.
 /// </summary>
 public class TutorialUIManager : MonoBehaviour
 {
@@ -28,9 +29,14 @@ public class TutorialUIManager : MonoBehaviour
 
     private void Update()
     {
-        // 🎯 튜토리얼 UI가 켜져 있을 때만 'C'키 입력을 받아 닫기!
+        // 🎯 튜토리얼 창이 활성화되어 있을 때
         if (isTutorialActive && currentActivePanel != null)
         {
+            // 🛑 [핵심 보강] 만약 열린 패널에 MultiPageTutorial 컴포넌트가 붙어있다면,
+            // 페이지 넘김 처리를 위해 TutorialUIManager는 C키 입력을 가로채지 않고 패스!
+            if (currentActivePanel.GetComponent<MultiPageTutorial>() != null) return;
+
+            // 일반 1페이지짜리 패널일 때만 C키로 바로 닫기!
             if (Input.GetKeyDown(KeyCode.C))
             {
                 CloseTutorial();
@@ -38,9 +44,6 @@ public class TutorialUIManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 🛑 트리거에서 넘겨받은 UI 패널 오브젝트를 켜고 시간 정지!
-    /// </summary>
     public void OpenTutorialPanel(GameObject tutorialPanel)
     {
         if (tutorialPanel == null) return;
@@ -48,14 +51,10 @@ public class TutorialUIManager : MonoBehaviour
         currentActivePanel = tutorialPanel;
         currentActivePanel.SetActive(true);
 
-        // 🛑 게임 물리 및 시간 완전 정지!
         Time.timeScale = 0f;
         isTutorialActive = true;
     }
 
-    /// <summary>
-    /// ▶️ C키 클릭 시 현재 켜진 튜토리얼 패널을 끄고 게임 재개
-    /// </summary>
     public void CloseTutorial()
     {
         if (currentActivePanel != null)
@@ -64,7 +63,15 @@ public class TutorialUIManager : MonoBehaviour
             currentActivePanel = null;
         }
 
-        // ▶️ 게임 시간 다시 흘러가게 복구!
+        // 🎯 [핵심] 바로 시간을 풀지 않고, 이번 프레임의 C키 입력이 소진되도록 코루틴 실행!
+        StartCoroutine(ResumeGameAfterFrameRoutine());
+    }
+
+    private IEnumerator ResumeGameAfterFrameRoutine()
+    {
+        // 🎯 1프레임 대기 (모든 스크립트의 Update()가 지나갈 때까지 대기!)
+        yield return null;
+
         Time.timeScale = 1f;
         isTutorialActive = false;
     }
