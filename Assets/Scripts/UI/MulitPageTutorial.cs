@@ -22,7 +22,7 @@ public class MultiPageTutorial : MonoBehaviour
     private void Update()
     {
         // 🎯 C키 (또는 Space키)를 누르면 다음 페이지로 넘김!
-        if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.C))
         {
             NextPage();
         }

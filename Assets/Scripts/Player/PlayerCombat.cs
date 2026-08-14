@@ -2,8 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// [전투 및 상호작용 전담 모듈] 근접 단검 공격, 백스탭, E키 상호작용, 슬롯 전환(1:단검, 2:투척물) 및 투척
-/// 🎯 [상호작용 보강] 조준 대상 실시간 감지 & E키 습득 UI 팝업 이벤트 지원!
+/// 🎯 [전투 및 상호작용 전담 모듈 - 실시간 암살 UI 연동 복구 버전]
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {
@@ -18,7 +17,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private Transform playerCamera;
 
     [Header("Dagger Settings")]
-    [SerializeField] private float daggerRange = 2.0f;
+    [SerializeField] private float daggerRange = 2.2f; // 살짝 여유있게 보정!
     [SerializeField] private float daggerDamage = 35.0f;
     [SerializeField] private float daggerBackstabDamage = 999.0f;
     [SerializeField] private float daggerCooldown = 0.8f;
@@ -44,19 +43,21 @@ public class PlayerCombat : MonoBehaviour
     private bool hasThrowable = false;
     private float lastDaggerTime = -999f;
 
-    // 🎯 [신규] 현재 바라보고 있는 상호작용 대상 캐싱
     private IInteractable currentHoveredInteractable = null;
+    private bool isAssassinateAvailable = false; // 🎯 현재 암살 가능 상태 캐싱
 
     public event Action<WeaponType> OnWeaponChanged;
     public event Action OnAttack;
     public event Action OnThrow;
     public event Action<bool> OnThrowableStateChanged;
 
-    // 🎯 [신규] UI 연동용 이벤트 (상호작용 가능 여부, 표시할 안내 텍스트)
-    public event Action<bool, string> OnInteractableHovered;
+    // 🎯 UI 연동 이벤트
+    public event Action<bool, string> OnInteractableHovered; // E키 습득 안내
+    public event Action<bool> OnAssassinateHovered;           // 🌟 암살 가능 UI 팝업 이벤트!
 
     public bool HasThrowable => hasThrowable;
     public WeaponType CurrentWeapon => currentWeapon;
+    public bool IsAssassinateAvailable => isAssassinateAvailable;
 
     private void Awake()
     {
@@ -69,7 +70,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void Start()
     {
-        if (playerCamera == null)
+        if (playerCamera == null && Camera.main != null)
             playerCamera = Camera.main.transform;
 
         if (throwPoint == null && playerCamera != null)
@@ -79,7 +80,6 @@ public class PlayerCombat : MonoBehaviour
             autoPoint.transform.localPosition = new Vector3(0.2f, -0.2f, 0.6f);
             autoPoint.transform.localRotation = Quaternion.identity;
             throwPoint = autoPoint.transform;
-            Debug.Log("🎯 [PlayerCombat] ThrowPoint가 비어있어 카메라 정면에 자동 생성했습니다!");
         }
     }
 
@@ -87,7 +87,8 @@ public class PlayerCombat : MonoBehaviour
     {
         HandleWeaponSwitch();
         HandleAttack();
-        HandleInteractionDetection(); // 🎯 매 프레임 감지 & E키 입력 처리
+        HandleInteractionDetection(); // E키 상호작용
+        HandleAssassinationDetection(); // 🌟 [핵심 추가] 실시간 암살 가능 여부 감지 & UI 갱신!
     }
 
     private void HandleWeaponSwitch()
@@ -118,19 +119,29 @@ public class PlayerCombat : MonoBehaviour
         Debug.Log($"🔄 [무기 교체] 현재 슬롯: {currentWeapon}");
     }
 
+    /// <summary>
+    /// 🎯 [실시간 암살 감지] 매 프레임 적 뒤에 있는지 체크하여 UI 이벤트를 발송합니다.
+    /// </summary>
+    private void HandleAssassinationDetection()
+    {
+        bool canAssassinateNow = CanAssassinateTarget();
+
+        if (canAssassinateNow != isAssassinateAvailable)
+        {
+            isAssassinateAvailable = canAssassinateNow;
+            OnAssassinateHovered?.Invoke(isAssassinateAvailable); // 🌟 UI 스크립트로 상태 전송!
+        }
+    }
+
     public bool IsStrictBackstabTarget(EnemyAI enemyAI, EnemyHealth enemyHealth)
     {
         if (enemyHealth == null || enemyHealth.IsDead) return false;
-
-        if (enemyAI != null && enemyAI.IsAlerted)
-        {
-            return false;
-        }
+        if (enemyAI != null && enemyAI.IsAlerted) return false;
 
         Transform enemyTransform = enemyAI != null ? enemyAI.transform : enemyHealth.transform;
 
         Vector3 enemyForward = enemyTransform.forward;
-        Vector3 playerForward = playerCamera.forward;
+        Vector3 playerForward = playerCamera != null ? playerCamera.forward : transform.forward;
         float viewAngle = Vector3.Angle(enemyForward, playerForward);
 
         Vector3 dirToPlayer = (transform.position - enemyTransform.position).normalized;
@@ -145,10 +156,11 @@ public class PlayerCombat : MonoBehaviour
 
     public bool CanAssassinateTarget()
     {
-        if (currentWeapon != WeaponType.Dagger) return false;
+        if (currentWeapon != WeaponType.Dagger || playerCamera == null) return false;
 
         RaycastHit hit;
-        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange))
+        // 🌟 트리거 콜라이더를 무시하고 실제 몸체 콜라이더만 검사!
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange, ~0, QueryTriggerInteraction.Ignore))
         {
             EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();
             EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
@@ -207,7 +219,7 @@ public class PlayerCombat : MonoBehaviour
         }
 
         RaycastHit hit;
-        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange))
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange, ~0, QueryTriggerInteraction.Ignore))
         {
             EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();
             EnemyHealth enemyHealth = hit.transform.GetComponentInParent<EnemyHealth>();
@@ -236,28 +248,24 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 🎯 [실시간 상호작용 감지 및 E키 입력 처리]
-    /// </summary>
     private void HandleInteractionDetection()
     {
+        if (playerCamera == null) return;
+
         RaycastHit hit;
         IInteractable interactable = null;
 
-        // 1. 카메라 정면 레이캐스트
-        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, pickupRange))
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, pickupRange, ~0, QueryTriggerInteraction.Ignore))
         {
             interactable = hit.collider.GetComponent<IInteractable>();
         }
 
-        // 2. 조준 대상 변경 감지 & UI 텍스트 전송
         if (interactable != currentHoveredInteractable)
         {
             currentHoveredInteractable = interactable;
 
             if (currentHoveredInteractable != null)
             {
-                // 🎯 [수정] NEMESYS 폰트 스타일에 맞춘 깔끔한 영문 대문자 문구!
                 string promptText = hasThrowable ? "SLOT FULL (1/1)" : "PRESS [E] TO PICK UP";
                 OnInteractableHovered?.Invoke(true, promptText);
             }
@@ -267,11 +275,9 @@ public class PlayerCombat : MonoBehaviour
             }
         }
 
-        // 3. E키 입력 시 상호작용 실행
         if (Input.GetKeyDown(KeyCode.E) && currentHoveredInteractable != null)
         {
             currentHoveredInteractable.Interact(gameObject);
-
             currentHoveredInteractable = null;
             OnInteractableHovered?.Invoke(false, string.Empty);
         }
