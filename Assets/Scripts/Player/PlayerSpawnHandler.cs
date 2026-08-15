@@ -44,7 +44,7 @@ public class PlayerSpawnHandler : MonoBehaviour
     /// </summary>
     private void TeleportPlayerToSkipPoint()
     {
-        // 💡 [초중요 프로팁] CharacterController가 켜져 있으면 transform 이동이 씹힐 수 있으므로 잠시 껐다 켭니다!
+        // CharacterController가 켜져 있으면 transform 이동이 무시되므로 잠시 꺼둔다
         CharacterController cc = playerObject.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
 

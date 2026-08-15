@@ -26,9 +26,6 @@ public class InGameHUDManager : MonoBehaviour
     [SerializeField] private float flashDuration = 0.45f;
     [Range(0f, 1f)][SerializeField] private float maxAlpha = 0.75f;
 
-    // ========================================================================
-    // 🗡️ [무기/투척물 개별 UI 오브젝트 슬롯]
-    // ========================================================================
     [Header("🗡️ Weapon Icon UI (Individual GameObjects)")]
     [Tooltip("단검 아이콘 UI 오브젝트 (단검 소지/들고 있을 때 활성화)")]
     [SerializeField] private GameObject daggerIconUI;

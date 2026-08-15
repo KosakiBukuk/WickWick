@@ -43,7 +43,7 @@ public class PlayerController : MonoBehaviour
     public bool IsCrouching => isCrouching;
     public bool IsSprinting => isSprinting;
 
-    //외부에서 현재 구역을 읽을 수 있게해주는 변수
+    // 외부에서 현재 구역을 읽을 수 있게 해주는 프로퍼티
     public int CurrentZone => currentZone;
 
     private void Awake()

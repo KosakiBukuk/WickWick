@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using static ScoreManager;
 
 /// <summary>
-/// 🎯 [게임 클리어 결과 화면 UI 연출 모듈 - 완벽 복구 & 디버깅 강화 버전]
+/// 게임 클리어 결과 화면 UI 연출 모듈.
 /// </summary>
 public class ResultScreenUI : MonoBehaviour
 {

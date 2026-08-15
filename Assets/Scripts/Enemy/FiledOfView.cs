@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Alerted(발각) 상태 진입 시 360도 전방위 시야 및 사거리 150% 동적 확장 지원 FOV 센서
-/// 🎯 [수정 완료] showFOVMesh 스위치 추가로 인게임 화면 시야각 Mesh 온/오프 지원!
+/// Alerted(발각) 상태 진입 시 360도 전방위 시야 및 사거리 150% 동적 확장 지원 FOV 센서.
+/// showFOVMesh 스위치로 인게임 화면에서 시야각 Mesh 표시 여부를 제어합니다.
 /// </summary>
 public class FieldOfView : MonoBehaviour
 {

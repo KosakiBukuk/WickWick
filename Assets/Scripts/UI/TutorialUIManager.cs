@@ -2,8 +2,8 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [튜토리얼 UI 매니저 - 입력 씹힘/중복 방지 완결판]
-/// C키로 닫을 때 1프레임 딜레이를 주어 플레이어가 같은 프레임에 앉아버리는 현상을 원천 차단합니다.
+/// 튜토리얼 UI 패널을 열고 닫는 매니저.
+/// C키로 닫을 때 1프레임 딜레이를 주어 플레이어가 같은 프레임에 앉아버리는 현상을 방지합니다.
 /// </summary>
 public class TutorialUIManager : MonoBehaviour
 {

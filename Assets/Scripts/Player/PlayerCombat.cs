@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [전투 및 상호작용 전담 모듈 - 실시간 암살 UI 연동 복구 버전]
+/// 전투 및 상호작용 전담 모듈.
 /// </summary>
 public class PlayerCombat : MonoBehaviour
 {

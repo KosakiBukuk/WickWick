@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [최종 완결판] 추격 끊김 해결, 순찰 지점 대기/좌우정찰, 소음 감지, 
-/// 거리 비례 발각 속도 가속 & 주변 동료 적 비상 전파 & 정밀 사운드 동기화 & Character Controller 밀침 방지 AI
+/// 적 AI 전담 모듈. 순찰/의심/추격 상태를 관리하며,
+/// 소음 감지, 거리 비례 발각 속도, 주변 동료에게 경보 전파, 상태별 사운드 재생을 처리합니다.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(FieldOfView))]
@@ -51,9 +51,6 @@ public class EnemyAI : MonoBehaviour
     [Header("Combat Reference")]
     [SerializeField] private EnemyCombat enemyCombat; // 🎯 EnemyCombat 연동 참조!
 
-    // ========================================================================
-    // 🔊 [🔊 State Audio Settings]
-    // ========================================================================
     [Header("🔊 State Audio Settings")]
     [Tooltip("사운드가 출력될 AudioSource (비워두면 자동 찾기)")]
     [SerializeField] private AudioSource audioSource;
@@ -91,7 +88,7 @@ public class EnemyAI : MonoBehaviour
 
     // 🎯 외부 참조용 프로퍼티들
     public State CurrentState => currentState;
-    public bool IsAlerted => currentState == State.Alerted; // 👈 🎯 [신규 추가] CS1061 에러 완벽 해결!
+    public bool IsAlerted => currentState == State.Alerted;
     public float CurrentDetectionGauge => currentDetectionGauge;
 
     private void Awake()

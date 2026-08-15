@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// 🎯 [땅 뚫림 완벽 방지] 적 둥둥 모듈
-/// Mathf.Sin을 0~1 범위로 변환하여 땅 밑으로 들어가지 않고 공중에서만 부드럽게 둥둥 뜹니다.
+/// 적을 공중에서 부드럽게 둥둥 띄우는 모듈.
+/// Mathf.Sin 값을 0~1 범위로 변환해 사용하므로 땅 밑으로 들어가지 않습니다.
 /// </summary>
 public class EnemyFloating : MonoBehaviour
 {
@@ -53,10 +53,10 @@ public class EnemyFloating : MonoBehaviour
         bool isMoving = agent != null && agent.velocity.sqrMagnitude > 0.1f;
         float currentSpeed = isMoving ? (floatSpeed * moveSpeedMultiplier) : floatSpeed;
 
-        // 🎯 [핵심 수학 보정] -1 ~ +1 범위를 0 ~ 1 범위로 변환!
+        // sin 값(-1~1)을 0~1 범위로 정규화
         float sin01 = (Mathf.Sin(Time.time * currentSpeed) + 1.0f) * 0.5f;
 
-        // 🎯 원래 바닥 위치 + 기본 붕 뜨는 높이(hoverOffset) + 둥둥 움직임(floatAmount)
+        // 기본 바닥 위치 + hoverOffset + floatAmount 만큼의 둥둥 움직임
         Vector3 currentPos = visualMesh.localPosition;
         currentPos.y = defaultLocalY + hoverOffset + (sin01 * floatAmount);
 

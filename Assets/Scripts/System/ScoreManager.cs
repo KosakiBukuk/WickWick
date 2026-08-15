@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [점수 집계 & 랭크 산출 & 최고 기록 저장 시스템 - 고스트 어쌔신 특화 밸런스판]
+/// 점수 집계, 랭크 산출, 최고 기록 저장을 담당.
 /// 무발각 상태에서의 적 은신 처치(Kill)에 가장 높은 가중치를 부여합니다.
 /// </summary>
 public class ScoreManager : MonoBehaviour
@@ -39,7 +39,7 @@ public class ScoreManager : MonoBehaviour
     [Tooltip("체력이 100% 보존되었을 때 최대 보너스")]
     [SerializeField] private float maxHealthBonus = 2000f;
 
-    [Header("Rank Thresholds (개편된 랭크 컷)")]
+    [Header("Rank Thresholds")]
     [SerializeField] private float sRankThreshold = 18000f; // 무발각 다처치 시 달성 가능!
     [SerializeField] private float aRankThreshold = 13000f; // 무처치 스피드런 달성 가능
     [SerializeField] private float bRankThreshold = 8000f;
@@ -195,8 +195,7 @@ public class ScoreManager : MonoBehaviour
         public int killBonus;
         public int healthBonus;
 
-        // 🌟 [이 2줄이 추가되어야 빨간 줄이 사라져요!]
-        public bool isNewRecord; // 🎯 신기록 달성 여부 (True/False)
-        public int highScore;    // 🎯 역대 최고 점수
+        public bool isNewRecord; // 신기록 달성 여부
+        public int highScore;    // 역대 최고 점수
     }
 }

@@ -2,8 +2,8 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [1인칭 시원한 대각선 단검 베기 연출 모듈]
-/// 칼을 오른쪽 위에서 왼쪽 아래로 쾌감 넘치게 크게 궤적을 그리며 획-! 베어 가릅니다.
+/// 1인칭 대각선 단검 베기 연출 모듈.
+/// 칼을 오른쪽 위에서 왼쪽 아래로 큰 궤적을 그리며 휘두릅니다.
 /// </summary>
 public class WeaponAttack : MonoBehaviour
 {
@@ -18,7 +18,7 @@ public class WeaponAttack : MonoBehaviour
     [SerializeField] private Vector3 slashRotation = new Vector3(30f, -75f, 55f);
 
     [Header("⏱️ Speed Settings")]
-    [Tooltip("휘두르는 속도 (숫자가 클수록 슉- 하고 광속으로 벱니다)")]
+    [Tooltip("휘두르는 속도 (숫자가 클수록 빠르게 벱니다)")]
     [SerializeField] private float slashSpeed = 22f;
 
     [Tooltip("복귀 속도 (제자리로 돌아오는 속도)")]
@@ -59,7 +59,7 @@ public class WeaponAttack : MonoBehaviour
         Quaternion startRot = startLocalRot;
         Quaternion endSlashRot = startLocalRot * Quaternion.Euler(slashRotation);
 
-        // 1. ⚡ [Phase 1] 찰나의 순간에 획-! 하고 화면을 대각선으로 베어 가르기!
+        // 1. 화면을 대각선으로 베는 모션
         float t = 0f;
         while (t < 1f)
         {
@@ -71,7 +71,7 @@ public class WeaponAttack : MonoBehaviour
             yield return null;
         }
 
-        // 2. 🌸 [Phase 2] 원래 대기 자세로 부드럽게 복귀
+        // 2. 원래 대기 자세로 부드럽게 복귀
         t = 0f;
         while (t < 1f)
         {

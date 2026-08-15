@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [최종 완결판] 2m 이내 접근 시 단검 베기 공격(선모션 0.25s + 후딜 0.35s) 및 데미지 전달 전담 모듈
+/// 2m 이내 접근 시 단검 베기 공격(선모션 0.25s + 후딜 0.35s) 및 데미지 전달 전담 모듈
 /// </summary>
 [RequireComponent(typeof(EnemyHealth))]
 [RequireComponent(typeof(EnemyAI))]

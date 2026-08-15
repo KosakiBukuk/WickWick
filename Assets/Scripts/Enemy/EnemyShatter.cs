@@ -23,17 +23,16 @@ public class EnemyShatter : MonoBehaviour
 
     private void Start()
     {
-        // 🎯 1. 모든 자식 큐브의 Rigidbody에 물리 폭발력(AddExplosionForce) 가하기!
+        // 모든 자식 큐브의 Rigidbody에 폭발력을 가한다
         Rigidbody[] rbs = GetComponentsInChildren<Rigidbody>();
 
         foreach (Rigidbody rb in rbs)
         {
-            // 약간의 랜덤성 추가로 파편이 진짜처럼 불규칙하게 튐!
+            // 폭발 위치에 랜덤 오프셋을 줘서 파편이 균일하게 튀지 않도록 함
             Vector3 randomOffset = Random.insideUnitSphere * 0.2f;
             rb.AddExplosionForce(explosionForce, transform.position + randomOffset, explosionRadius, upwardsModifier);
         }
 
-        // 🎯 2. 지정된 시간이 지나면 파편 오브젝트 자동 삭제 (메모리 최적화!)
         Destroy(gameObject, destroyDelay);
     }
 }

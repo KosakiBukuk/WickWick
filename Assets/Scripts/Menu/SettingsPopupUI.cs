@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 🎯 [간이 설정창(Settings) 팝업 컨트롤러 - 볼륨 즉시 동기화 버전]
+/// 설정창(Settings) 팝업 컨트롤러. 슬라이더 조작 시 볼륨을 즉시 동기화합니다.
 /// </summary>
 public class SettingsPopupUI : MonoBehaviour
 {

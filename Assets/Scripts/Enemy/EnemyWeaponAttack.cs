@@ -52,7 +52,7 @@ public class EnemyWeaponAttack : MonoBehaviour
         Vector3 targetPos = startLocalPos + slashOffset;
         Quaternion targetRot = startLocalRot * Quaternion.Euler(slashRotation);
 
-        // 1. ⚡ 칼을 획-! 하고 왼쪽 아래로 베어 가르기!
+        // 1. 왼쪽 아래로 베는 모션
         float t = 0f;
         while (t < 1f)
         {
@@ -62,7 +62,7 @@ public class EnemyWeaponAttack : MonoBehaviour
             yield return null;
         }
 
-        // 2. 🌸 대기 자세로 복귀
+        // 2. 대기 자세로 복귀
         t = 0f;
         while (t < 1f)
         {

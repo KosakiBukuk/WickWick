@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [암살 UI 전담 모듈 - 이벤트 기반 완벽 연동 버전]
+/// 암살 UI 전담 모듈.
 /// PlayerCombat의 OnAssassinateHovered 이벤트를 수신하여 암살 가능 UI를 On/Off 합니다.
 /// </summary>
 public class AssassinateUI : MonoBehaviour

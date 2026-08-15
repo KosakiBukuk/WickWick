@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [1인칭 카메라 헤드밥 모듈 - 떨림 및 Y축 추락 완벽 수정본]
+/// 1인칭 카메라 헤드밥 모듈.
 /// Main Camera의 localPosition(0,0,0)을 기준점으로 삼아 LateUpdate에서 부드럽게 흔듭니다.
 /// </summary>
 public class CameraBobbing : MonoBehaviour
@@ -40,12 +40,12 @@ public class CameraBobbing : MonoBehaviour
         if (playerController == null) playerController = GetComponentInParent<PlayerController>();
         if (characterController == null) characterController = GetComponentInParent<CharacterController>();
 
-        // 🎯 [핵심 1] Main Camera의 로컬 위치 기준점을 (0,0,0)으로 확실히 보정!
+        // Main Camera의 로컬 위치 기준점을 (0,0,0)으로 보정
         transform.localPosition = Vector3.zero;
         transform.localRotation = Quaternion.identity;
     }
 
-    // 🎯 [핵심 2] Update가 아닌 LateUpdate에서 연산해야 CharacterController 이동 후 미세 떨림(Jitter)이 사라짐!
+    // Update가 아닌 LateUpdate에서 연산해야 CharacterController 이동 후 미세 떨림(Jitter)이 사라짐
     private void LateUpdate()
     {
         HandleHeadBob();
@@ -90,7 +90,7 @@ public class CameraBobbing : MonoBehaviour
             targetBobPosition = Vector3.zero;
         }
 
-        // 🎯 [핵심 3] Vector3.Lerp를 통해 매 프레임 위치를 아주 부드럽게 보정!
+        // Vector3.Lerp로 매 프레임 위치를 부드럽게 보정
         transform.localPosition = Vector3.Lerp(transform.localPosition, targetBobPosition, Time.deltaTime * smoothSpeed);
     }
 }

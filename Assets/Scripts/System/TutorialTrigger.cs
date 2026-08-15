@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [구역 감지 트리거 - 씬 리로드 후에도 '이미 본 튜토리얼' 기억 버전]
+/// 특정 구역에 들어오면 튜토리얼 UI를 띄우는 트리거.
+/// 이미 본 튜토리얼은 씬을 리로드해도 다시 표시하지 않습니다.
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class TutorialTrigger : MonoBehaviour
@@ -18,7 +19,7 @@ public class TutorialTrigger : MonoBehaviour
     [Tooltip("한 번만 실행하고 트리거를 끌지 여부")]
     [SerializeField] private bool triggerOnce = true;
 
-    // 🌟 [핵심 마법] 씬이 다시 로드되어도 메모리에 살아남는 정적(static) 기록장!
+    // static이라 씬을 리로드해도 값이 유지됨
     private static HashSet<string> seenTutorials = new HashSet<string>();
 
     private bool hasTriggered = false;

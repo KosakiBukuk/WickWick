@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// [4단계 수정본] 체력 관리, 피격 시 Alerted 발각 전환, 사망 처리 전담
-/// 🎯 [암살 버그 수정] 한 방에 즉사(암살)할 경우 동료에게 경보를 울리지 않고 깔끔하게 사망!
+/// 체력 관리, 피격 시 Alerted 발각 전환, 사망 처리를 담당.
+/// 암살로 즉사할 경우 동료에게 경보를 울리지 않고 조용히 사망 처리합니다.
 /// </summary>
 public class EnemyHealth : MonoBehaviour
 {
