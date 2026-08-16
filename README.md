@@ -13,3 +13,8 @@ SPACE 점프
 ESC 일시정지
 
 
+Main Title BGM : Karl Casey @ White Bat Audio
+Used Font : NEMESYS — Futuristic Cyberpunk Font
+Sound Effect : Player & Enemy Attack : https://youtu.be/PgAI2B2-R9g?si=BCx-17QJBh7cruQe
+              Player Slash Sound : https://youtu.be/SyWoFJ1N_tg?si=H7I-hHTN_n6jrs0Z
+              Throwable Item Drop Sound : https://youtu.be/Cw8gnsCdphQ?si=QfTJ40HTCupKhV_2
