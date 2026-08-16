@@ -57,7 +57,7 @@ public class ResultScreenUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 탈출 구역(ExitZone) 도달 시 호출되는 진입 함수
+    /// 탈출 구역(ExitZone) 도달 시 호출되는 진입 함수
     /// </summary>
     public void OpenResultScreen()
     {
@@ -88,7 +88,7 @@ public class ResultScreenUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 unscaledDeltaTime 기반 순차 집계 코루틴
+    /// unscaledDeltaTime 기반 순차 집계 코루틴
     /// </summary>
     private IEnumerator ShowResultSequenceRoutine(ScoreResult result)
     {

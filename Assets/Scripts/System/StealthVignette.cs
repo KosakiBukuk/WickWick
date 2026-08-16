@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal; // URP Post-Processing 연동
 
 /// <summary>
-/// 🎯 [앉기 은신 화면 연출 모듈]
+/// 앉기 은신 화면 연출 모듈
 /// PlayerController의 IsCrouching 상태를 감지하여
 /// Post-Processing Vignette(비네팅) 강도를 부드럽게 Lerp 연출합니다.
 /// </summary>
@@ -52,10 +52,10 @@ public class StealthVignette : MonoBehaviour
     {
         if (vignette == null || playerController == null) return;
 
-        // 🎯 플레이어가 앉아있는지(IsCrouching)에 따라 목표 어두움 강도 결정!
+        // 플레이어가 앉아있는지(IsCrouching)에 따라 목표 어두움 강도 결정
         float targetIntensity = playerController.IsCrouching ? crouchIntensity : normalIntensity;
 
-        // 🎯 부드럽게 Lerp 전환하여 은신 몰입감 연출!
+        // Lerp로 부드럽게 전환
         vignette.intensity.value = Mathf.Lerp(vignette.intensity.value, targetIntensity, Time.deltaTime * transitionSpeed);
     }
 }

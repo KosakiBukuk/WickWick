@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 🎯 [인게임 HUD & 피격 효과 연출 매니저]
+/// 인게임 HUD 및 피격 효과 연출 매니저
 /// HP 텍스트("HP 100 / 100"), 무기/투척물 UI 아이콘 ON/OFF 스위칭, 피격 비네팅 연출을 전담합니다.
 /// </summary>
 public class InGameHUDManager : MonoBehaviour
@@ -162,7 +162,7 @@ public class InGameHUDManager : MonoBehaviour
         damageOverlayImage.color = c;
     }
 
-    // 🎯 [핵심] 현재 무기 상태에 따라 각각의 UI 오브젝트를 활성화 / 비활성화!
+    // 현재 무기 상태에 따라 UI 오브젝트를 활성화/비활성화
     private void UpdateWeaponIcon(PlayerCombat.WeaponType weaponType)
     {
         if (weaponType == PlayerCombat.WeaponType.Dagger)

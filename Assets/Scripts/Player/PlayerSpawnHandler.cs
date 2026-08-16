@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [인게임 스폰 및 튜토리얼 스킵 처리 핸들러]
+/// 인게임 스폰 및 튜토리얼 스킵 처리 핸들러
 /// MainMenuController의 선택에 따라 플레이어 스폰 위치를 결정합니다.
 /// </summary>
 public class PlayerSpawnHandler : MonoBehaviour
@@ -28,7 +28,7 @@ public class PlayerSpawnHandler : MonoBehaviour
             return;
         }
 
-        // 2. ⚡ 튜토리얼 스킵 여부 확인 및 텔레포트 실행!
+        // 2. 튜토리얼 스킵 여부 확인 및 텔레포트 실행
         if (MainMenuController.IsTutorialSkipped && skipTutoSpawnPoint != null)
         {
             TeleportPlayerToSkipPoint();
@@ -40,7 +40,7 @@ public class PlayerSpawnHandler : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 플레이어를 SkipTuto 위치로 이동시키고 구역을 초기화하는 함수
+    /// 플레이어를 SkipTuto 위치로 이동시키고 구역을 초기화하는 함수
     /// </summary>
     private void TeleportPlayerToSkipPoint()
     {

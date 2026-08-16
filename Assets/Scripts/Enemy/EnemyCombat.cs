@@ -28,7 +28,7 @@ public class EnemyCombat : MonoBehaviour
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
 
-    // 🎯 EnemyAI에서 참조할 프로퍼티 (외부 공개)
+    // EnemyAI에서 참조할 프로퍼티 (외부 공개)
     public float MeleeAttackRange => meleeAttackRange;
     public bool IsAttacking => isAttacking;
 
@@ -50,7 +50,7 @@ public class EnemyCombat : MonoBehaviour
         if (enemyHealth != null && enemyHealth.IsDead) return;
         if (playerTransform == null) return;
 
-        // 🎯 Alerted(추격) 상태이고 공격 중이 아닐 때 2m 접근 판단
+        // Alerted(추격) 상태이고 공격 중이 아닐 때 2m 접근 판단
         if (enemyAI.CurrentState == EnemyAI.State.Alerted && !isAttacking)
         {
             float distToPlayer = Vector3.Distance(transform.position, playerTransform.position);
@@ -66,7 +66,7 @@ public class EnemyCombat : MonoBehaviour
     {
         isAttacking = true;
 
-        // 🛑 단검을 내리치는 동안 이동속도 완전 정지!
+        // 단검을 내리치는 동안 이동속도 정지
         if (agent != null && agent.isOnNavMesh)
         {
             agent.isStopped = true;
@@ -84,7 +84,7 @@ public class EnemyCombat : MonoBehaviour
         Debug.Log($"🗡️ [{gameObject.name}] 단검 공격 시도!");
         yield return new WaitForSeconds(meleeWindUpTime);
 
-        // 🎯 1. 적의 칼 휘두르기 모션 호출!
+        // 1. 적의 칼 휘두르기 모션 호출
         if (enemyWeaponAttack != null)
         {
             enemyWeaponAttack.SwingKnife();
@@ -111,6 +111,6 @@ public class EnemyCombat : MonoBehaviour
         yield return new WaitForSeconds(meleeRecoveryTime);
 
         lastAttackTime = Time.time;
-        isAttacking = false; // 🎯 공격 종료! EnemyAI가 다시 이동 여부를 판단함
+        isAttacking = false; // 공격 종료, EnemyAI가 다시 이동 여부를 판단함
     }
 }

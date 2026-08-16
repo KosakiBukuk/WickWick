@@ -181,7 +181,7 @@ public class ScoreManager : MonoBehaviour
     public string GetSavedBestRank() => PlayerPrefs.GetString(BEST_RANK_KEY, "None");
 
     /// <summary>
-    /// 🎯 [UI 및 결과 연동용 데이터 구조체]
+    /// UI 및 결과 연동용 데이터 구조체
     /// </summary>
     public struct ScoreResult
     {

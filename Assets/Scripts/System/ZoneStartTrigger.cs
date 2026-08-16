@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [Zone 1 시작 & 역주행 방지 차단벽 활성화 트리거]
+/// Zone 1 시작 및 역주행 방지 차단벽 활성화 트리거
 /// 1. 플레이어 구역 번호를 Zone 1로 갱신
 /// 2. 점수 및 클리어 타임 집계 시작
 /// 3. Zone 0(튜토리얼 구역) 재진입을 막는 차단벽 오브젝트 활성화
@@ -33,11 +33,11 @@ public class ZoneStartTrigger : MonoBehaviour
         PlayerController player = other.GetComponent<PlayerController>();
         if (player != null)
         {
-            // 🎯 1. 플레이어 구역 번호를 Zone 1로 갱신!
+            // 1. 플레이어 구역 번호를 Zone 1로 갱신
             player.SetCurrentZone(targetZone);
         }
 
-        // 🎯 2. 구역 번호가 확실하게 갱신되었을 때 시스템 작동!
+        // 2. 구역 번호가 갱신된 경우에만 동작
         if (player != null && player.CurrentZone == targetZone)
         {
             isTriggered = true;
@@ -55,7 +55,7 @@ public class ZoneStartTrigger : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 등록된 차단벽 오브젝트들을 활성화하는 함수
+    /// 등록된 차단벽 오브젝트들을 활성화하는 함수
     /// </summary>
     private void ActivateBlockers()
     {

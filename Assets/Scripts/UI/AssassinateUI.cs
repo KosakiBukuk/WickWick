@@ -34,7 +34,7 @@ public class AssassinateUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // 🌟 플레이어 이벤트 구독 (암살 상태 실시간 수신)
+        // 플레이어 이벤트 구독 (암살 상태 실시간 수신)
         if (playerCombat != null)
         {
             playerCombat.OnAssassinateHovered += OnAssassinateStateChanged;
@@ -43,7 +43,7 @@ public class AssassinateUI : MonoBehaviour
 
     private void OnDisable()
     {
-        // 🌟 이벤트 구독 해제 (메모리 누수 방지)
+        // 이벤트 구독 해제 (메모리 누수 방지)
         if (playerCombat != null)
         {
             playerCombat.OnAssassinateHovered -= OnAssassinateStateChanged;
@@ -51,7 +51,7 @@ public class AssassinateUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 PlayerCombat에서 암살 가능 여부가 바뀔 때마다 즉각 호출되는 함수
+    /// PlayerCombat에서 암살 가능 여부가 바뀔 때마다 호출되는 함수
     /// </summary>
     private void OnAssassinateStateChanged(bool canAssassinate)
     {

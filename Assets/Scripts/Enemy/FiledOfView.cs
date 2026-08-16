@@ -14,7 +14,7 @@ public class FieldOfView : MonoBehaviour
 
     [Header("🎨 Mesh Visual Settings")]
     [Tooltip("체크 해제 시 게임 화면에서 바닥 시야각 Mesh를 그리지 않고 숨깁니다.")]
-    [SerializeField] private bool showFOVMesh = false;         // 🎯 [신규] 시야각 메쉬 연출 스위치!
+    [SerializeField] private bool showFOVMesh = false;         // 시야각 메쉬 표시 스위치
     [SerializeField] private Color baseColor = new Color(1f, 0.92f, 0.016f, 0.25f); // 노랑 (평시)
     [SerializeField] private Color fillColor = new Color(1f, 0.5f, 0f, 0.45f);      // 주황 (의심)
     [SerializeField] private Color alertColor = new Color(1f, 0f, 0f, 0.35f);       // 빨강 (발각)
@@ -30,7 +30,7 @@ public class FieldOfView : MonoBehaviour
     private MeshRenderer baseMeshRenderer;
     private MeshRenderer fillMeshRenderer;
 
-    // 🎯 Alerted 상태 시 사거리 1.5배 확장 및 360도 전방위 시야 동적 반환
+    // Alerted 상태에서는 사거리 1.5배, 360도 시야로 확장
     public float CurrentViewRadius => (enemyAI != null && enemyAI.CurrentState == EnemyAI.State.Alerted) ? baseViewRadius * 1.5f : baseViewRadius;
     public float CurrentViewAngle => (enemyAI != null && enemyAI.CurrentState == EnemyAI.State.Alerted) ? 360f : baseViewAngle;
 
@@ -74,7 +74,7 @@ public class FieldOfView : MonoBehaviour
 
         if (distToTarget <= radius)
         {
-            // 🎯 360도 시야 상태이거나 지정된 부채꼴 각도 내 진입 시 체크
+            // 360도 시야 상태이거나 지정된 부채꼴 각도 내에 있는지 체크
             if (angle >= 360f || Vector3.Angle(transform.forward, dirToTarget) < angle / 2f)
             {
                 // 장애물 레이캐스트 검사
@@ -133,7 +133,7 @@ public class FieldOfView : MonoBehaviour
     {
         if (enemyAI == null) return;
 
-        // 🎯 [핵심] showFOVMesh가 false이면 Mesh 생성을 건너뛰고 기존 Mesh 삭제!
+        // showFOVMesh가 false이면 Mesh 생성을 건너뛰고 기존 Mesh를 삭제
         if (!showFOVMesh)
         {
             if (baseMeshFilter != null) baseMeshFilter.mesh = null;

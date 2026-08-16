@@ -48,14 +48,14 @@ public class EnemyHealth : MonoBehaviour
 
         currentHealth = Mathf.Max(0f, currentHealth - damage);
 
-        // 🎯 [핵심 버그 수정] 체력이 0 이하로 한 방에 죽을 경우(암살) 경보를 울리지 않고 즉시 사망!
+        // 체력이 한 방에 0 이하로 떨어지면(암살) 경보 없이 즉시 사망
         if (currentHealth <= 0f)
         {
             Die();
         }
         else
         {
-            // 🎯 한 방에 안 죽고 "살아남았을 때만" 적이 놀라며 Alerted 전환 및 동료 비상 전파!
+            // 한 방에 죽지 않고 살아남았을 때만 Alerted로 전환하고 동료에게 전파
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null && enemyAI != null && enemyAI.CurrentState != EnemyAI.State.Alerted)
             {
@@ -76,7 +76,7 @@ public class EnemyHealth : MonoBehaviour
 
         ScoreManager.Instance?.AddKill();
 
-        // 🎯 1. 사망 위치에 큐브 파편 프리팹 짠! 하고 생성!
+        // 1. 사망 위치에 파편 프리팹 생성
         if (shatterPrefab != null)
         {
             Vector3 spawnPosition = transform.position + (transform.forward * forwardOffset) + (Vector3.up * upwardOffset);

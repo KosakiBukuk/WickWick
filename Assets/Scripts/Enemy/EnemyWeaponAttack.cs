@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [적 칼 휘두르기 공격 모션 모듈]
+/// 적 칼 휘두르기 공격 모션 모듈
 /// 적이 플레이어를 공격할 때 손에 든 칼을 획-! 베어 가르고 제자리로 돌아옵니다.
 /// </summary>
 public class EnemyWeaponAttack : MonoBehaviour
@@ -33,7 +33,7 @@ public class EnemyWeaponAttack : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 적 AI에서 호출하는 칼 휘두르기 함수!
+    /// 적 AI에서 호출하는 칼 휘두르기 함수
     /// </summary>
     public void SwingKnife()
     {

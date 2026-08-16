@@ -23,7 +23,7 @@ public class SettingsPopupUI : MonoBehaviour
         if (closeButton != null)
             closeButton.onClick.AddListener(CloseSettings);
 
-        // 🌟 1. 저장된 볼륨값 불러와서 유니티 전체 볼륨에 즉시 적용!
+        // 1. 저장된 볼륨값을 불러와 전체 볼륨에 적용
         float savedVolume = PlayerPrefs.GetFloat(MASTER_VOL_KEY, 1f);
         AudioListener.volume = savedVolume;
 

@@ -31,13 +31,13 @@ public class WeaponAttack : MonoBehaviour
 
     private void Awake()
     {
-        // 🎯 시작할 때 손에 든 기본 위치와 회전값 저장!
+        // 시작할 때 손에 든 기본 위치와 회전값 저장
         startLocalPos = transform.localPosition;
         startLocalRot = transform.localRotation;
     }
 
     /// <summary>
-    /// 🎯 외부(PlayerCombat)에서 호출하는 공격 함수!
+    /// 외부(PlayerCombat)에서 호출하는 공격 함수
     /// </summary>
     public void SwingWeapon()
     {

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// 🎯 [탈출 시네머신, Waypoint 자동 이동, 적 정지 & 결과창 호출 전담 모듈]
+/// 탈출 시네머신, Waypoint 자동 이동, 적 정지 및 결과창 호출 전담 모듈
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class ExitZone : MonoBehaviour
@@ -167,13 +167,13 @@ public class ExitZone : MonoBehaviour
             if (dolly != null) dolly.CameraPosition = 1f;
         }
 
-        // 🌟 컷씬 종료 직후 0.3초 대기 후 곧바로 최종 점수 결과 화면 오픈!
+        // 컷씬 종료 직후 0.3초 대기 후 최종 점수 결과 화면 오픈
         yield return new WaitForSeconds(0.3f);
         OpenFinalResultScreen();
     }
 
     /// <summary>
-    /// 🎯 ResultScreenUI 싱글톤을 통한 결과창 오픈
+    /// ResultScreenUI 싱글톤을 통한 결과창 오픈
     /// </summary>
     private void OpenFinalResultScreen()
     {

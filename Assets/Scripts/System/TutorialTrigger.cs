@@ -32,7 +32,7 @@ public class TutorialTrigger : MonoBehaviour
 
     private void Start()
     {
-        // 🎯 [핵심] 씬이 다시 로드되었을 때, 이미 본 적 있는 튜토리얼이라면 즉시 트리거 비활성화!
+        // 씬이 다시 로드됐을 때, 이미 본 튜토리얼이면 트리거를 즉시 비활성화
         if (seenTutorials.Contains(tutorialID))
         {
             gameObject.SetActive(false);
@@ -48,7 +48,7 @@ public class TutorialTrigger : MonoBehaviour
         {
             hasTriggered = true;
 
-            // 🎯 static 기록장에 이 튜토리얼 ID를 '열람 완료'로 등록!
+            // static 기록에 이 튜토리얼 ID를 열람 완료로 등록
             if (!seenTutorials.Contains(tutorialID))
             {
                 seenTutorials.Add(tutorialID);
@@ -67,7 +67,7 @@ public class TutorialTrigger : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 (선택) 타이틀 화면으로 나가거나 게임을 완전히 처음부터 시작할 때 기록을 초기화하는 함수
+    /// 타이틀 화면으로 나가거나 처음부터 다시 시작할 때 기록을 초기화하는 함수
     /// </summary>
     public static void ResetSeenTutorialHistory()
     {

@@ -66,7 +66,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // 🎯 [핵심] 튜토리얼 창이 떠서 시간이 멈춘 상태(Time.timeScale == 0)라면 조작/카메라 회전 통째로 중단!
+        // 튜토리얼 창이 떠서 시간이 멈춘 상태(Time.timeScale == 0)라면 조작/카메라 회전을 중단
         if (Time.timeScale == 0f) return;
 
         HandleMouseLook();
@@ -93,7 +93,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleStateInputs()
     {
-        // 🎯 1. [토글 방식 적용] C키 또는 LeftControl 키를 '눌렀을 때(GetKeyDown)' 앉기 상태 반전!
+        // 1. C키 또는 LeftControl 키를 눌렀을 때(GetKeyDown) 앉기 상태 반전
         if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
         {
             isCrouching = !isCrouching;
@@ -105,7 +105,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 🎯 2. 달리기는 기존처럼 LeftShift 꾹 누르는 동안만 발동 (앉아있을 땐 불가능)
+        // 2. 달리기는 LeftShift를 누르는 동안만 발동 (앉아있을 땐 불가능)
         if (!isCrouching)
         {
             isSprinting = Input.GetKey(KeyCode.LeftShift);
@@ -117,7 +117,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 [선택 A 연동] 암살 시 강제로 앉은 자세를 풀고 일어서게 만드는 메서드
+    /// 암살 시 강제로 앉은 자세를 풀고 일어서게 만드는 메서드
     /// </summary>
     public void ForceStandUp()
     {
@@ -179,7 +179,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 구역 전환 트리거를 밟았을 때 호출될 함수
+    /// 구역 전환 트리거를 밟았을 때 호출될 함수
     /// </summary>
     public void SetCurrentZone(int newZone)
     {

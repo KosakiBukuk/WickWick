@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [PlayerController 연동 모듈]
+/// PlayerController 연동 모듈
 /// 플레이어의 이동 상태(기어가기/걷기/달리기) 및 CharacterController의 속도를 감지하여
 /// 발자국 주기에 따라 주변 적 AI(EnemyAI)에게 소음 파동을 발사합니다.
 /// </summary>
@@ -116,7 +116,7 @@ public class PlayerNoise : MonoBehaviour
         }
     }
 
-    // 🎯 씬 뷰(Scene View)에서 플레이어가 달리고/걸을 때 소음 범위를 시각적으로 기즈모로 확인!
+    // 씬 뷰(Scene View)에서 플레이어가 달리고/걸을 때 소음 범위를 기즈모로 확인
     private void OnDrawGizmosSelected()
     {
         if (playerController == null || characterController == null) return;

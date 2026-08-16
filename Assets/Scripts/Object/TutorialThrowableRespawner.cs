@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [튜토리얼 전용] 필드의 소화기가 사라지면(획득/파괴) 자동 감지하여 일정 시간 후 원위치 리스폰!
+/// [튜토리얼 전용] 필드의 소화기가 사라지면(획득/파괴) 자동 감지하여 일정 시간 후 원위치에 리스폰
 /// </summary>
 public class TutorialThrowableRespawner : MonoBehaviour
 {
@@ -30,7 +30,7 @@ public class TutorialThrowableRespawner : MonoBehaviour
 
     private void Update()
     {
-        // 🎯 [핵심] 필드에 있던 소화기(currentInstance)가 주워져서 Destroy 되었고,
+        // 필드에 있던 소화기(currentInstance)가 주워져서 Destroy 되었고,
         // 현재 리스폰 타이머가 돌아가는 중이 아니라면 자동 리스폰 시작!
         if (currentInstance == null && !isRespawning)
         {

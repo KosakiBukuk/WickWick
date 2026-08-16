@@ -63,7 +63,7 @@ public class EnemyDetectionUI : MonoBehaviour
 
     private void LateUpdate()
     {
-        // 🎯 빌보드: 카메라 정면 바라보기
+        // 빌보드: 카메라 정면 바라보기
         if (mainCameraTransform != null)
         {
             transform.rotation = Quaternion.LookRotation(transform.position - mainCameraTransform.position);
@@ -81,7 +81,7 @@ public class EnemyDetectionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 실시간 게이지 연산 및 연출
+    /// 실시간 게이지 연산 및 연출
     /// </summary>
     private void UpdateDetectionUI()
     {
@@ -90,7 +90,7 @@ public class EnemyDetectionUI : MonoBehaviour
         float gauge = enemyAI.CurrentDetectionGauge; // 0 ~ 100
         float gaugePercent = Mathf.Clamp01(gauge / 100f);
 
-        // 1. 🎯 0%일 때는 틀과 채우기 모두 숨김!
+        // 1. 0%일 때는 틀과 채우기 모두 숨김
         if (gauge <= 0f)
         {
             SetUIVisible(false);
@@ -101,10 +101,10 @@ public class EnemyDetectionUI : MonoBehaviour
         // 0% 초과면 마름모 틀과 채우기 켜기!
         SetUIVisible(true);
 
-        // 2. 🎯 게이지 비율(0~1)에 따라 아래에서 위로 차오름!
+        // 2. 게이지 비율(0~1)에 따라 아래에서 위로 차오름
         fillImage.fillAmount = gaugePercent;
 
-        // 3. 🎯 게이지 비율에 따라 노란색 -> 주황색 -> 빨간색으로 물듬!
+        // 3. 게이지 비율에 따라 노란색 -> 주황색 -> 빨간색으로 변함
         if (enemyAI.CurrentState == EnemyAI.State.Alerted || gauge >= 100f)
         {
             fillImage.color = alertColor; // 100% 완전한 빨간색!
@@ -116,7 +116,7 @@ public class EnemyDetectionUI : MonoBehaviour
         {
             fillImage.color = Color.Lerp(normalColor, alertColor, gaugePercent);
 
-            // 🎯 30% 이상 진입 시 눈 아이콘 + 사운드!
+            // 30% 이상 진입 시 눈 아이콘 + 사운드 재생
             if (gauge >= 30f)
             {
                 if (eyeIconObject != null && !eyeIconObject.activeSelf)

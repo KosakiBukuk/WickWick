@@ -3,12 +3,12 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 🎯 [메인 타이틀 화면 UI & 씬 진입 컨트롤러]
+/// 메인 타이틀 화면 UI 및 씬 진입 컨트롤러
 /// 일반 시작 / 튜토리얼 스킵 시작 / 설정창 팝업 / 게임 종료를 제어합니다.
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
-    // 🌟 인게임 씬에서 참조할 튜토리얼 스킵 플래그 (static)
+    // 인게임 씬에서 참조할 튜토리얼 스킵 플래그 (static)
     public static bool IsTutorialSkipped { get; private set; } = false;
 
     [Header("🎯 Main Menu Buttons")]
@@ -57,7 +57,7 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 1. 튜토리얼 포함 시작 (Zone 0부터)
+    /// 1. 튜토리얼 포함 시작 (Zone 0부터)
     /// </summary>
     public void OnNormalStartClicked()
     {
@@ -68,7 +68,7 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 2. 튜토리얼 스킵 시작 (Zone 1 직행!)
+    /// 2. 튜토리얼 스킵 시작 (Zone 1로 바로 진입)
     /// </summary>
     public void OnSkipTutorialStartClicked()
     {
@@ -79,7 +79,7 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 3. 설정 창 토글
+    /// 3. 설정 창 토글
     /// </summary>
     public void OnSettingsClicked()
     {
@@ -90,7 +90,7 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 4. 게임 종료
+    /// 4. 게임 종료
     /// </summary>
     public void OnExitClicked()
     {

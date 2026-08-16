@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 Zone 0 튜토리얼에서 사망 시 호출하는 퀵 씬 리스타트
+    /// Zone 0 튜토리얼에서 사망 시 호출하는 씬 재시작
     /// </summary>
     public void RestartTutorialScene()
     {

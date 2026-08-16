@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [플레이어 무기 스위칭 시각 연출 모듈]
+/// 플레이어 무기 스위칭 시각 연출 모듈
 /// PlayerCombat의 OnWeaponChanged 이벤트를 수신하여 화면상 무기 Pivot을 스르륵 내리고 올립니다.
 /// </summary>
 public class PlayerEquipmentManager : MonoBehaviour
@@ -43,7 +43,7 @@ public class PlayerEquipmentManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 🎯 PlayerCombat의 무기 변경 이벤트 구독!
+        // PlayerCombat의 무기 변경 이벤트 구독
         if (playerCombat != null)
         {
             playerCombat.OnWeaponChanged += HandleWeaponChanged;
@@ -70,7 +70,7 @@ public class PlayerEquipmentManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 PlayerCombat에서 슬롯이 바뀌면 호출되는 이벤트 수신기!
+    /// PlayerCombat에서 슬롯이 바뀌면 호출되는 이벤트 수신기
     /// </summary>
     private void HandleWeaponChanged(PlayerCombat.WeaponType newWeapon)
     {
@@ -91,7 +91,7 @@ public class PlayerEquipmentManager : MonoBehaviour
         Transform targetPivot = (targetWeapon == PlayerCombat.WeaponType.Dagger) ? knifePivot : throwablePivot;
         Vector3 targetOrigin = (targetWeapon == PlayerCombat.WeaponType.Dagger) ? knifeOriginPos : throwableOriginPos;
 
-        // 1. 📉 현재 무기 피벗을 화면 아래로 스르륵 내리기
+        // 1. 현재 무기 피벗을 화면 아래로 내리기
         if (currentPivot != null && currentPivot.gameObject.activeSelf)
         {
             float t = 0f;
@@ -107,7 +107,7 @@ public class PlayerEquipmentManager : MonoBehaviour
             currentPivot.gameObject.SetActive(false);
         }
 
-        // 2. 📈 타겟 무기 피벗 활성화 후 화면 아래에서 올리기
+        // 2. 타겟 무기 피벗 활성화 후 화면 아래에서 올리기
         currentVisualWeapon = targetWeapon;
         if (targetPivot != null)
         {

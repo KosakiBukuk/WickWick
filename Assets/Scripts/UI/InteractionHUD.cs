@@ -28,7 +28,7 @@ public class InteractionHUD : MonoBehaviour
 
         if (playerCombat != null)
         {
-            // 🎯 이벤트 구독!
+            // 이벤트 구독
             playerCombat.OnInteractableHovered += UpdateInteractionUI;
         }
 

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 통과하는 플레이어의 구역 번호를 갱신해 주는 감지기
+/// 통과하는 플레이어의 구역 번호를 갱신하는 감지기
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class ZoneBoundaryTrigger : MonoBehaviour
@@ -20,7 +20,7 @@ public class ZoneBoundaryTrigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // 🎯 부딪힌 플레이어의 컴포넌트를 가져와서 구역 번호 갱신!
+            // 부딪힌 플레이어의 컴포넌트를 가져와서 구역 번호 갱신
             PlayerController player = other.GetComponent<PlayerController>();
             if (player != null)
             {

@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 🎯 [인게임 ESC 일시정지 & 메인메뉴 복귀 팝업 컨트롤러]
+/// 인게임 ESC 일시정지 및 메인메뉴 복귀 팝업 컨트롤러
 /// </summary>
 public class PauseMenuController : MonoBehaviour
 {
@@ -45,7 +45,7 @@ public class PauseMenuController : MonoBehaviour
         // ESC 키 입력 감지
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            // 🌟 결과창 내부의 실제 UI 패널(ReultScreenUIROOT)이 켜져 있을 때만 ESC 무시!
+            // 결과창 내부의 실제 UI 패널(ReultScreenUIROOT)이 켜져 있을 때만 ESC 무시
             if (ResultScreenUI.Instance != null)
             {
                 // ResultScreenUI의 자식 패널이나 실제 켜짐 여부를 체크하도록 방어
@@ -66,7 +66,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 게임 일시정지 & 팝업 열기
+    /// 게임 일시정지 및 팝업 열기
     /// </summary>
     public void PauseGame()
     {
@@ -84,7 +84,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 계속하기 (게임으로 복귀)
+    /// 계속하기 (게임으로 복귀)
     /// </summary>
     public void ResumeGame()
     {
@@ -102,7 +102,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 메인 메뉴로 나가기
+    /// 메인 메뉴로 나가기
     /// </summary>
     public void GoToMainMenu()
     {

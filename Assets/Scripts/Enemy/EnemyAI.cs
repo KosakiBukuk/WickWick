@@ -49,7 +49,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float sweepSpeed = 1.5f;
 
     [Header("Combat Reference")]
-    [SerializeField] private EnemyCombat enemyCombat; // 🎯 EnemyCombat 연동 참조!
+    [SerializeField] private EnemyCombat enemyCombat; // EnemyCombat 연동 참조
 
     [Header("🔊 State Audio Settings")]
     [Tooltip("사운드가 출력될 AudioSource (비워두면 자동 찾기)")]
@@ -86,7 +86,7 @@ public class EnemyAI : MonoBehaviour
     private bool isPatrolWaiting = false;
     private float patrolWaitTimer = 0f;
 
-    // 🎯 외부 참조용 프로퍼티들
+    // 외부 참조용 프로퍼티
     public State CurrentState => currentState;
     public bool IsAlerted => currentState == State.Alerted;
     public float CurrentDetectionGauge => currentDetectionGauge;

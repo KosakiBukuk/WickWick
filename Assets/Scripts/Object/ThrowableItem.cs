@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 던져서 바닥/벽에 충돌 시 소음을 발산하여 적을 유인하고, 
+/// 던져서 바닥/벽에 충돌 시 소음을 발산하여 적을 유인하고,
 /// 충돌 속도에 맞춰 3D 충돌 사운드(SFX)를 재생하는 투척물 스크립트입니다.
 /// </summary>
 [RequireComponent(typeof(Rigidbody), typeof(Collider))]
@@ -43,10 +43,10 @@ public class ThrowableItem : MonoBehaviour
         {
             hasLanded = true;
 
-            // 🎯 1. 주변 적 AI 유인 소음 발생!
+            // 1. 주변 적 AI 유인 소음 발생
             EmitNoise(transform.position);
 
-            // 🎯 2. 충돌 속도에 맞춰 찰진 3D SFX 사운드 출력!
+            // 2. 충돌 속도에 맞춰 3D SFX 사운드 출력
             if (impactSFX != null)
             {
                 // 충돌 속도가 빠를수록 소리가 커지는 생동감 연출 (최대 볼륨 1.0)

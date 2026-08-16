@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 🎯 [다중 페이지 튜토리얼 컴포넌트]
+/// 다중 페이지 튜토리얼 컴포넌트
 /// 여러 개의 튜토리얼 이미지/페이지를 C키로 순서대로 넘겨보고 종료합니다.
 /// </summary>
 public class MultiPageTutorial : MonoBehaviour
@@ -21,7 +21,7 @@ public class MultiPageTutorial : MonoBehaviour
 
     private void Update()
     {
-        // 🎯 C키 (또는 Space키)를 누르면 다음 페이지로 넘김!
+        // C키(또는 Space키)를 누르면 다음 페이지로 넘김
         if (Input.GetKeyDown(KeyCode.C))
         {
             NextPage();
@@ -32,14 +32,14 @@ public class MultiPageTutorial : MonoBehaviour
     {
         currentPageIndex++;
 
-        // 🎯 아직 볼 페이지가 남아있다면 다음 페이지 켜기!
+        // 아직 볼 페이지가 남아있다면 다음 페이지 켜기
         if (currentPageIndex < pages.Length)
         {
             UpdatePageDisplay();
         }
         else
         {
-            // 🎯 모든 페이지를 다 봤다면 매니저를 통해 튜토리얼 창 닫기!
+            // 모든 페이지를 다 봤다면 매니저를 통해 튜토리얼 창 닫기
             if (TutorialUIManager.Instance != null)
             {
                 TutorialUIManager.Instance.CloseTutorial();

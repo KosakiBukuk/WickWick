@@ -44,13 +44,13 @@ public class PlayerCombat : MonoBehaviour
     private float lastDaggerTime = -999f;
 
     private IInteractable currentHoveredInteractable = null;
-    private bool isAssassinateAvailable = false; // 🎯 현재 암살 가능 상태 캐싱
+    private bool isAssassinateAvailable = false; // 현재 암살 가능 상태 캐싱
 
     public event Action<WeaponType> OnWeaponChanged;
 
-    // 🎯 UI 연동 이벤트
+    // UI 연동 이벤트
     public event Action<bool, string> OnInteractableHovered; // E키 습득 안내
-    public event Action<bool> OnAssassinateHovered;           // 🌟 암살 가능 UI 팝업 이벤트!
+    public event Action<bool> OnAssassinateHovered;           // 암살 가능 UI 팝업 이벤트
 
     public WeaponType CurrentWeapon => currentWeapon;
 
@@ -83,7 +83,7 @@ public class PlayerCombat : MonoBehaviour
         HandleWeaponSwitch();
         HandleAttack();
         HandleInteractionDetection(); // E키 상호작용
-        HandleAssassinationDetection(); // 🌟 [핵심 추가] 실시간 암살 가능 여부 감지 & UI 갱신!
+        HandleAssassinationDetection(); // 실시간 암살 가능 여부 감지 및 UI 갱신
     }
 
     private void HandleWeaponSwitch()
@@ -114,7 +114,7 @@ public class PlayerCombat : MonoBehaviour
     }
 
     /// <summary>
-    /// 🎯 [실시간 암살 감지] 매 프레임 적 뒤에 있는지 체크하여 UI 이벤트를 발송합니다.
+    /// 매 프레임 적 뒤에 있는지 체크하여 UI 이벤트를 발송합니다.
     /// </summary>
     private void HandleAssassinationDetection()
     {
@@ -123,7 +123,7 @@ public class PlayerCombat : MonoBehaviour
         if (canAssassinateNow != isAssassinateAvailable)
         {
             isAssassinateAvailable = canAssassinateNow;
-            OnAssassinateHovered?.Invoke(isAssassinateAvailable); // 🌟 UI 스크립트로 상태 전송!
+            OnAssassinateHovered?.Invoke(isAssassinateAvailable); // UI 스크립트로 상태 전송
         }
     }
 
@@ -153,7 +153,7 @@ public class PlayerCombat : MonoBehaviour
         if (currentWeapon != WeaponType.Dagger || playerCamera == null) return false;
 
         RaycastHit hit;
-        // 🌟 트리거 콜라이더를 무시하고 실제 몸체 콜라이더만 검사!
+        // 트리거 콜라이더를 무시하고 실제 몸체 콜라이더만 검사
         if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, daggerRange, ~0, QueryTriggerInteraction.Ignore))
         {
             EnemyAI enemyAI = hit.transform.GetComponentInParent<EnemyAI>();

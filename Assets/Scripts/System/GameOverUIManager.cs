@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 🎯 [게임오버 연출 및 UI 전담 모듈]
+/// 게임오버 연출 및 UI 전담 모듈
 /// PlayerHealth.OnDie 이벤트를 구독하여 화면 페이드아웃 →
 /// GAMEOVER UI 표시 → 메인메뉴(TitleScene) 복귀 / 게임 종료를 처리합니다.
 /// </summary>
@@ -129,17 +129,17 @@ public class GameOverUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 🔘 [메인 메뉴로 복귀] 버튼
+    /// 메인 메뉴로 복귀 버튼
     /// </summary>
     private void OnBackToMenuClicked()
     {
         Debug.Log("🏠 [GameOverUIManager] TitleScene(0번 씬)으로 복귀합니다!");
-        Time.timeScale = 1f; // ⚠️ 시간 복구 필수!
+        Time.timeScale = 1f; // 시간 복구
         SceneManager.LoadScene(titleSceneIndex);
     }
 
     /// <summary>
-    /// 🔘 [게임 완전 종료] 버튼
+    /// 게임 완전 종료 버튼
     /// </summary>
     private void OnQuitGameClicked()
     {

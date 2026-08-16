@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 🎯 [플레이어 체력 및 피격/구역별 사망 전담 모듈]
+/// 플레이어 체력 및 피격/구역별 사망 전담 모듈
 /// 체력 관리, 피격 사운드, 구역별(Zone 0 vs Zone 1+) 분기 사망 처리를 담당합니다.
 /// </summary>
 public class PlayerHealth : MonoBehaviour
@@ -21,7 +21,7 @@ public class PlayerHealth : MonoBehaviour
     private bool isDead = false;
     private PlayerController playerController;
 
-    // 🎯 UI 및 연출 스크립트에서 구독할 이벤트들!
+    // UI 및 연출 스크립트에서 구독할 이벤트들
     public event Action<float, float> OnHealthChanged; // (currentHealth, maxHealth)
     public event Action OnTakeDamage;                   // 피격 순간 이벤트
     public event Action OnDie;                          // 정식 사망(Zone 1 이상) 순간 이벤트
@@ -39,7 +39,7 @@ public class PlayerHealth : MonoBehaviour
             audioSource.playOnAwake = false;
         }
 
-        // 🎯 플레이어 컨트롤러 컴포넌트 캐싱 (Zone 감지용)
+        // 플레이어 컨트롤러 컴포넌트 캐싱 (Zone 감지용)
         playerController = GetComponent<PlayerController>();
     }
 
@@ -55,13 +55,13 @@ public class PlayerHealth : MonoBehaviour
 
         currentHealth = Mathf.Max(0f, currentHealth - damage);
 
-        // 1. 🔊 피격 효과음 1회 출력!
+        // 1. 피격 효과음 1회 출력
         if (audioSource != null && damageSFX != null)
         {
             audioSource.PlayOneShot(damageSFX, damageSFXVolume);
         }
 
-        // 2. 📡 UI 매니저로 이벤트 전파!
+        // 2. UI 매니저로 이벤트 전파
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnTakeDamage?.Invoke();
 
@@ -75,7 +75,7 @@ public class PlayerHealth : MonoBehaviour
     {
         isDead = true;
 
-        // 🎯 [핵심] 현재 위치가 Zone 0 (튜토리얼 구역)인지 체크!
+        // 현재 위치가 Zone 0 (튜토리얼 구역)인지 체크
         if (playerController != null && playerController.CurrentZone == 0)
         {
 
@@ -92,7 +92,7 @@ public class PlayerHealth : MonoBehaviour
         }
         else
         {
-            // 🎯 Zone 1 이후부터는 정식 Game Over 플로우 실행!
+            // Zone 1 이후부터는 정식 Game Over 플로우 실행
             OnDie?.Invoke();
 
             // 플레이어 조작 비활성화
@@ -103,18 +103,5 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 🎯 (선택) 씬 리로드가 아닌 인게임 수동 부활/체력 복구 시 사용하는 메서드
-    /// </summary>
-    public void ResetHealth()
-    {
-        isDead = false;
-        currentHealth = maxHealth;
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
-
-        if (playerController != null)
-        {
-            playerController.enabled = true;
-        }
-    }
+   
 }
