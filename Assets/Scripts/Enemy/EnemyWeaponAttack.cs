@@ -25,8 +25,6 @@ public class EnemyWeaponAttack : MonoBehaviour
     private Quaternion startLocalRot;
     private bool isAttacking = false;
 
-    public bool IsAttacking => isAttacking;
-
     private void Awake()
     {
         // 시작할 때 적 손에 들린 칼의 기본 위치/회전 저장!

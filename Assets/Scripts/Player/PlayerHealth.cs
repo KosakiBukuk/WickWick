@@ -54,7 +54,6 @@ public class PlayerHealth : MonoBehaviour
         if (isDead) return;
 
         currentHealth = Mathf.Max(0f, currentHealth - damage);
-        Debug.Log($"🩸 [Player] 피격! 남은 체력: {currentHealth}/{maxHealth}");
 
         // 1. 🔊 피격 효과음 1회 출력!
         if (audioSource != null && damageSFX != null)
@@ -79,7 +78,6 @@ public class PlayerHealth : MonoBehaviour
         // 🎯 [핵심] 현재 위치가 Zone 0 (튜토리얼 구역)인지 체크!
         if (playerController != null && playerController.CurrentZone == 0)
         {
-            Debug.Log("🔄 [PlayerHealth] Zone 0(튜토리얼)에서 사망 감지! ➔ 씬 자동 재시작!");
 
             if (GameManager.Instance != null)
             {
@@ -95,8 +93,6 @@ public class PlayerHealth : MonoBehaviour
         else
         {
             // 🎯 Zone 1 이후부터는 정식 Game Over 플로우 실행!
-            Debug.Log("💀 [PlayerHealth] 정식 구역에서 사망! (GAME OVER UI 호출)");
-
             OnDie?.Invoke();
 
             // 플레이어 조작 비활성화

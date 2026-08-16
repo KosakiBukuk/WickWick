@@ -62,8 +62,6 @@ public class ThrowableItem : MonoBehaviour
                     AudioSource.PlayClipAtPoint(impactSFX, transform.position, impactVolume);
                 }
             }
-
-            Debug.Log($"💥 [{gameObject.name}] 소음 및 사운드 발생! 위치: {transform.position}");
         }
     }
 

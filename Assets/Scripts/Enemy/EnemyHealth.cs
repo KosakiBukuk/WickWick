@@ -47,7 +47,6 @@ public class EnemyHealth : MonoBehaviour
         if (isDead) return;
 
         currentHealth = Mathf.Max(0f, currentHealth - damage);
-        Debug.Log($"🩸 [{gameObject.name}] 피격! 남은 체력: {currentHealth}/{maxHealth}");
 
         // 🎯 [핵심 버그 수정] 체력이 0 이하로 한 방에 죽을 경우(암살) 경보를 울리지 않고 즉시 사망!
         if (currentHealth <= 0f)
@@ -68,7 +67,6 @@ public class EnemyHealth : MonoBehaviour
     private void Die()
     {
         isDead = true;
-        Debug.Log($"💀 [{gameObject.name}] 처치 완료!");
 
         // 모든 AI 및 센서, 컴포넌트 기능 완전 정지
         if (enemyAI != null) enemyAI.enabled = false;

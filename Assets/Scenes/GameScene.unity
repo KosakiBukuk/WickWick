@@ -47130,7 +47130,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquipmentManager
   playerCombat: {fileID: 1934939207}
-  weaponAttack: {fileID: 1986531828}
   knifePivot: {fileID: 1986531827}
   throwablePivot: {fileID: 1637796248}
   switchSpeed: 12

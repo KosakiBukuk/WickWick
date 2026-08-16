@@ -122,7 +122,6 @@ public class PlayerController : MonoBehaviour
     public void ForceStandUp()
     {
         isCrouching = false;
-        Debug.Log("🧍 [PlayerController] 암살 연출로 인해 플레이어가 강제로 일어섰습니다!");
     }
 
     private void HandleMovement()
@@ -185,6 +184,5 @@ public class PlayerController : MonoBehaviour
     public void SetCurrentZone(int newZone)
     {
         currentZone = newZone;
-        Debug.Log($"📍 [Player] 플레이어 구역 변경 완료 ➔ Zone {currentZone}");
     }
 }

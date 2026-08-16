@@ -9,7 +9,6 @@ public class PlayerEquipmentManager : MonoBehaviour
 {
     [Header("Script References")]
     [SerializeField] private PlayerCombat playerCombat;
-    [SerializeField] private WeaponAttack weaponAttack;
 
     [Header("⚔️ Weapon Pivots (Parent Objects)")]
     [Tooltip("1번 단검의 부모 피벗 (Knife_Pivot)")]

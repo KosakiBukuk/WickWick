@@ -47,17 +47,12 @@ public class PlayerCombat : MonoBehaviour
     private bool isAssassinateAvailable = false; // 🎯 현재 암살 가능 상태 캐싱
 
     public event Action<WeaponType> OnWeaponChanged;
-    public event Action OnAttack;
-    public event Action OnThrow;
-    public event Action<bool> OnThrowableStateChanged;
 
     // 🎯 UI 연동 이벤트
     public event Action<bool, string> OnInteractableHovered; // E키 습득 안내
     public event Action<bool> OnAssassinateHovered;           // 🌟 암살 가능 UI 팝업 이벤트!
 
-    public bool HasThrowable => hasThrowable;
     public WeaponType CurrentWeapon => currentWeapon;
-    public bool IsAssassinateAvailable => isAssassinateAvailable;
 
     private void Awake()
     {
@@ -116,7 +111,6 @@ public class PlayerCombat : MonoBehaviour
     {
         currentWeapon = newWeapon;
         OnWeaponChanged?.Invoke(currentWeapon);
-        Debug.Log($"🔄 [무기 교체] 현재 슬롯: {currentWeapon}");
     }
 
     /// <summary>
@@ -181,14 +175,12 @@ public class PlayerCombat : MonoBehaviour
             {
                 if (canAssassinate)
                 {
-                    Debug.Log("🗡️ [PlayerCombat] 앉은 상태에서 암살 개시! 일어서며 백스탭을 실행합니다!");
                     playerController.ForceStandUp();
                     if (weaponAttack != null) weaponAttack.SwingWeapon();
                     PerformDaggerAttack();
                     return;
                 }
 
-                Debug.Log("🤫 [PlayerCombat] 앉아있는 상태에서는 일반 공격이나 투척을 할 수 없습니다!");
                 return;
             }
 
@@ -210,8 +202,6 @@ public class PlayerCombat : MonoBehaviour
     private void PerformDaggerAttack()
     {
         lastDaggerTime = Time.time;
-        OnAttack?.Invoke();
-        Debug.Log("🗡️ 단검 휘두르기!");
 
         if (audioSource != null && daggerSwingSFX != null)
         {
@@ -226,8 +216,6 @@ public class PlayerCombat : MonoBehaviour
 
             bool isBackstab = IsStrictBackstabTarget(enemyAI, enemyHealth);
             float damage = isBackstab ? daggerBackstabDamage : daggerDamage;
-
-            Debug.Log($"🗡️ 단검 명중! ({hit.collider.name}) | 백스탭: {isBackstab} | 데미지: {damage}");
 
             if (enemyHealth != null && !enemyHealth.IsDead)
             {
@@ -293,7 +281,6 @@ public class PlayerCombat : MonoBehaviour
 
         hasThrowable = true;
         currentThrowablePrefab = prefab;
-        OnThrowableStateChanged?.Invoke(true);
 
         SwitchWeapon(WeaponType.Throwable);
         Debug.Log($"📦 [상호작용] {prefab.name} 획득 완료! (2번 슬롯 장착됨)");
@@ -305,8 +292,6 @@ public class PlayerCombat : MonoBehaviour
         if (currentThrowablePrefab == null || throwPoint == null || !hasThrowable) return;
 
         hasThrowable = false;
-        OnThrowableStateChanged?.Invoke(false);
-        OnThrow?.Invoke();
 
         GameObject thrownObj = Instantiate(currentThrowablePrefab, throwPoint.position, throwPoint.rotation);
 

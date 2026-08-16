@@ -28,7 +28,6 @@ public class WeaponAttack : MonoBehaviour
     private Quaternion startLocalRot;
     private bool isAttacking = false;
 
-    public bool IsAttacking => isAttacking;
 
     private void Awake()
     {
