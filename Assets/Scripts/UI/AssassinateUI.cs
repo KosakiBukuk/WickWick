@@ -30,6 +30,8 @@ public class AssassinateUI : MonoBehaviour
 
         // 3. 시작 시 UI 숨김 처리
         SetUIVisible(false);
+
+        Debug.Log($"[AssassinateUI][DEBUG] Awake() - playerCombat is {(playerCombat == null ? "NULL" : "FOUND")}");
     }
 
     private void OnEnable()
@@ -38,6 +40,11 @@ public class AssassinateUI : MonoBehaviour
         if (playerCombat != null)
         {
             playerCombat.OnAssassinateHovered += OnAssassinateStateChanged;
+            Debug.Log("[AssassinateUI][DEBUG] OnEnable() - subscribed to OnAssassinateHovered");
+        }
+        else
+        {
+            Debug.Log("[AssassinateUI][DEBUG] OnEnable() - playerCombat is NULL, subscription SKIPPED");
         }
     }
 
@@ -55,14 +62,17 @@ public class AssassinateUI : MonoBehaviour
     /// </summary>
     private void OnAssassinateStateChanged(bool canAssassinate)
     {
+        Debug.Log($"[AssassinateUI][DEBUG] OnAssassinateStateChanged() received value: {canAssassinate}");
         SetUIVisible(canAssassinate);
     }
 
     private void SetUIVisible(bool isVisible)
     {
+        Debug.Log($"[AssassinateUI][DEBUG] SetUIVisible({isVisible}) called - uiGroup is {(uiGroup == null ? "NULL" : "ASSIGNED")}");
         if (uiGroup != null)
         {
             uiGroup.SetActive(isVisible);
+            Debug.Log($"[AssassinateUI][DEBUG] uiGroup.SetActive({isVisible}) executed");
         }
     }
 }

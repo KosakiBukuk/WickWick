@@ -120,6 +120,11 @@ public class PlayerCombat : MonoBehaviour
     {
         bool canAssassinateNow = CanAssassinateTarget();
 
+        if (canAssassinateNow)
+        {
+            Debug.Log("[PlayerCombat][DEBUG] HandleAssassinationDetection() - CanAssassinateTarget() returned TRUE this frame");
+        }
+
         if (canAssassinateNow != isAssassinateAvailable)
         {
             isAssassinateAvailable = canAssassinateNow;
