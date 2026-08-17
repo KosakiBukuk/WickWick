@@ -12,7 +12,6 @@ SHIFT 달리기
 SPACE 점프
 ESC 일시정지
 
-* 암살 UI가 Web 환경에서 제대로 출력되지 않는 버그 존재 * - 2026. 08. 17 Fixed
 Main Title BGM : Karl Casey @ White Bat Audio
 Used Font : NEMESYS — Futuristic Cyberpunk Font
 Sound Effect : Player & Enemy Attack : https://youtu.be/PgAI2B2-R9g?si=BCx-17QJBh7cruQe
